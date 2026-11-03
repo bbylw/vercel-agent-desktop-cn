@@ -5,9 +5,8 @@ import nimbus, {
 } from "@cloudflare/nimbus-docs";
 import { tableScroll } from "@cloudflare/nimbus-docs/markdown";
 
-// 部署前把 site 换成正式域名（或设置 SITE_URL）：canonical URL、OG 图、robots.txt、
-// sitemap 和 /llms.txt 里的链接都由它推导。
-const site = process.env.SITE_URL ?? "https://agent-desktop.dev";
+// canonical URL、OG 图、robots.txt、sitemap 和 /llms.txt 里的链接都由它推导。
+const site = process.env.SITE_URL ?? "https://agent-desktop.ndjp.net";
 
 const nimbusConfig = defineNimbusConfig({
   site,
