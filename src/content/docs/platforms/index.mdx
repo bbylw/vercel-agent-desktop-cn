@@ -30,16 +30,7 @@ agent-desktop skills get platform
 
 ## 能力对照
 
-| | macOS | Windows | Linux |
-|---|:---:|:---:|:---:|
-| 可访问性树 | 支持 | 支持 | 支持（AT-SPI） |
-| 点击 / 输入 / 键盘 | 支持 | 支持 | AT-SPI；X11 / GNOME 按键 |
-| 鼠标输入 | 支持 | 支持 | X11，`--headed` |
-| 截图 | 支持，需要「屏幕录制」 | 支持 | X11 窗口；Wayland 门户 |
-| 剪贴板 | 支持 | 支持 | 支持；Wayland 需要 `wl-clipboard` |
-| 应用与窗口管理 | 支持 | 支持 | 启动/列出；X11 窗口控制 |
-| 通知 | 支持；通知中心需要 System Events 的自动化权限 | 支持 | GNOME Shell |
-| 外壳界面（`open-system-surface`） | Dock、菜单栏附加项 | 任务栏、系统托盘、开始菜单、操作中心 | 仅 `system-tray` 与 `action-center` 可用 |
+<PlatformCapabilities />
 
 `key-down`、`key-up`、`mouse-down`、`mouse-up` 四个命令名在所有平台上都失败关闭，
 原因见[错误与恢复](/output/errors/)。

@@ -1,6 +1,7 @@
 ---
 import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
 import { Code } from "@/components/ui/code";
+import PlatformCapabilities from "@/components/PlatformCapabilities.astro";
 import "./styles/home.css";
 
 const skillsCmd = `agent-desktop skills get desktop      # 循环、ref、验证与重试规则
@@ -107,18 +108,6 @@ const cmdGroups = [
   { label: "系统", items: ["status", "permissions", "version", "batch", "skills"] },
 ];
 
-// 能力对照。yes = 支持，part = 有条件，值和说明一起给。
-const rows: Array<{ name: string; mac: [string, string]; win: [string, string]; linux: [string, string] }> = [
-  { name: "可访问性树", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["支持（AT-SPI）", "yes"] },
-  { name: "点击 / 输入 / 键盘", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["AT-SPI；X11 / GNOME 按键", "part"] },
-  { name: "鼠标输入", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["X11，--headed", "part"] },
-  { name: "截图", mac: ["需「屏幕录制」", "part"], win: ["支持", "yes"], linux: ["X11 窗口；Wayland 门户", "part"] },
-  { name: "剪贴板", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["Wayland 需 wl-clipboard", "part"] },
-  { name: "应用与窗口管理", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["启动/列出；X11 窗口控制", "part"] },
-  { name: "通知", mac: ["需 System Events 自动化", "part"], win: ["支持", "yes"], linux: ["GNOME Shell", "part"] },
-  { name: "外壳界面", mac: ["Dock、菜单栏附加项", "part"], win: ["任务栏、托盘、开始菜单", "yes"], linux: ["仅 system-tray / action-center", "part"] },
-];
-
 // hero 右侧那个终端窗口。花括号在 Astro 模板里会被当成表达式，
 // 所以这段带标记的读数在 frontmatter 里拼成字符串，再用 set:html 输出。
 const termLines = [
@@ -144,8 +133,6 @@ const termLines = [
   '<span class="p">$</span> agent-desktop snapshot --app Finder -i   <span class="dim"># 再读一次核对</span>',
 ];
 const termHtml = termLines.join("\n");
-
-const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:circle-half");
 ---
 
 <main id="main-content">
@@ -350,28 +337,7 @@ const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:cir
         <code style="font-family:var(--nb-font-mono);font-size:0.875rem"> agent-desktop skills get platform</code>。
       </p>
 
-      <div class="ad-tablewrap">
-        <table class="ad-table">
-          <thead>
-            <tr><th scope="col">能力</th><th scope="col">macOS</th><th scope="col">Windows</th><th scope="col">Linux</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr>
-                <th scope="row">{r.name}</th>
-                {[r.mac, r.win, r.linux].map(([text, kind]) => (
-                  <td>
-                    <span class:list={["ad-cell", kind === "yes" ? "ad-yes" : "ad-part"]}>
-                      <Icon name={cellIcon(kind)} class="size-3.5 shrink-0" />
-                      {text}
-                    </span>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PlatformCapabilities variant="home" />
 
       <div class="ad-tablewrap" style="margin-top:1rem">
         <table class="ad-table">

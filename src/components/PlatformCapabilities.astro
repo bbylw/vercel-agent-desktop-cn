@@ -1,0 +1,64 @@
+---
+/**
+ * PlatformCapabilities — the capability matrix from `@/lib/platform-matrix`.
+ *
+ *   <PlatformCapabilities />                  // docs prose table
+ *   <PlatformCapabilities variant="home" />   // landing page table
+ *
+ * Registered in `src/components.ts`, so an `.mdx` page can drop it in without
+ * an import. Rendering lives here; the rows live in the data module, so the
+ * docs and the landing page can't drift apart.
+ */
+import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
+import { capabilityRows, type CapabilityCell } from "@/lib/platform-matrix";
+
+interface Props {
+  /** `docs` matches the prose tables; `home` uses the landing page's styling. */
+  variant?: "docs" | "home";
+}
+
+const { variant = "docs" } = Astro.props;
+const isHome = variant === "home";
+const cellIcon = (tone: CapabilityCell["tone"]) =>
+  tone === "yes" ? "ph:check-circle" : "ph:circle-half";
+// Backticks mark inline code, so a cell like "X11，`--headed`" keeps the code
+// span the prose table had, in both variants.
+const segments = (text: string) =>
+  text.split("`").map((part, index) => ({ code: index % 2 === 1, text: part }));
+---
+
+<div class={isHome ? "ad-tablewrap" : "nb-table-scroll"}>
+  <table class={isHome ? "ad-table" : undefined}>
+    <thead>
+      <tr>
+        <th scope="col">能力</th>
+        <th scope="col" style={isHome ? undefined : "text-align:center"}>macOS</th>
+        <th scope="col" style={isHome ? undefined : "text-align:center"}>Windows</th>
+        <th scope="col" style={isHome ? undefined : "text-align:center"}>Linux</th>
+      </tr>
+    </thead>
+    <tbody>
+      {capabilityRows.map((row) => (
+        <tr>
+          <th scope="row">{row.name}</th>
+          {[row.mac, row.win, row.linux].map((cell) => (
+            <td style={isHome ? undefined : "text-align:center"}>
+              {isHome ? (
+                <span class:list={["ad-cell", cell.tone === "yes" ? "ad-yes" : "ad-part"]}>
+                  <Icon name={cellIcon(cell.tone)} class="size-3.5 shrink-0" />
+                  {segments(cell.text).map((segment) =>
+                    segment.code ? <code>{segment.text}</code> : segment.text,
+                  )}
+                </span>
+              ) : (
+                segments(cell.text).map((segment) =>
+                  segment.code ? <code>{segment.text}</code> : segment.text,
+                )
+              )}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

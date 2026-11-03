@@ -40,9 +40,10 @@ agent-desktop notification-action           # 触发通知上的动作
 
 ## 界面与 Chromium / Electron
 
-agent-desktop 只负责桌面应用这一层，网页自动化请用 agent-browser。两者可以接力：
-对于你自己启动的 Chromium 或 Electron 应用里的网页内容，agent-desktop 会开一个
-DevTools 端口，让 agent-browser 连上去。
+agent-desktop 只负责桌面应用这一层：它读操作系统的可访问性树。网页内容请用
+[agent-browser](https://github.com/vercel-labs/agent-browser)，它走 Chrome DevTools 协议，
+把页面读成带 `@e1` 这类 ref 的文本。两者可以接力：对于你自己启动的 Chromium 或 Electron
+应用里的网页内容，agent-desktop 会开一个 DevTools 端口，让 agent-browser 用 `--cdp` 连上去。
 
 - [会话与追踪](/concepts/sessions/)：把跨界面的多步操作留在同一段记录里。
 - [平台支持](/platforms/)：每个平台支持的界面类型对照表。

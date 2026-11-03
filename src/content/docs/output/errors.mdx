@@ -15,6 +15,7 @@ description: 每个错误码意味着什么，以及智能体正确的下一步�
 | `STALE_REF` | ref 无法在当前界面重新识别 | 重新 `snapshot`，使用新快照里的 ref；读 `details.kind` 区分元素消失与地址失效 |
 | `AMBIGUOUS_TARGET` | ref 身份不唯一，或选目标时命中了多个对象 | 先读 `details.kind`：ref 双胞胎需要窗口内唯一控件或坐标点击；多窗口才用 `--window-id` |
 | `SNAPSHOT_NOT_FOUND` | 快照 id 不存在或已过期 | 重新 `snapshot` |
+| `PERM_DENIED` | 缺少系统权限，比如 macOS 的「辅助功能」「屏幕录制」或「自动化」 | 跑 `permissions` 看三项状态：`--request` 请求缺失项，`--guide` 打开系统设置；见[安装与权限](/start/install/) |
 | `POLICY_DENIED` | 物理输入或 headed 路径被策略阻止 | 确认是否需要 `--headed`，以及当前策略是否允许物理输入 |
 | `ACTION_FAILED` | 动作被拒绝，或观察到的结果与请求矛盾 | 读 `details` 和 `post_state`；不要盲目重试，先重新观察 |
 | `ACTION_NOT_SUPPORTED` | 目标没有暴露这个动作 | 换一个动作或用另一条路径完成目标 |

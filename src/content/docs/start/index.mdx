@@ -27,7 +27,7 @@ agent-desktop skills get desktop   # 智能体应该先读的指南
     不内嵌 LLM，不联网推理。每条命令打印一个 JSON 信封然后退出，输出完全可预测，也完全可脚本化。
   </Card>
   <Card title="只管桌面应用" icon="ph:desktop">
-    网页自动化请用 agent-browser。对于你自己启动的 Chromium 或 Electron 应用里的网页内容，agent-desktop 会开一个 DevTools 端口让 agent-browser 连上去。
+    网页自动化请用 [agent-browser](https://github.com/vercel-labs/agent-browser)：它走 Chrome DevTools 协议读网页，agent-desktop 只读操作系统的可访问性树。对于你自己启动的 Chromium 或 Electron 应用里的网页内容，agent-desktop 会开一个 DevTools 端口让 agent-browser 用 `--cdp` 连上去。
   </Card>
   <Card title="只看得见应用愿意暴露的" icon="ph:eye">
     它读可访问性树，不做像素匹配，所以一个不发布可访问性树的界面，它同样读不到。
@@ -65,15 +65,7 @@ core 永远不 import 任何平台 crate，平台 crate 之间也互不 import�
 
 ## 平台支持
 
-| | macOS | Windows | Linux |
-|---|:---:|:---:|:---:|
-| 可访问性树 | 支持 | 支持 | 支持（AT-SPI） |
-| 点击 / 输入 / 键盘 | 支持 | 支持 | AT-SPI；X11 / GNOME 按键 |
-| 鼠标输入 | 支持 | 支持 | X11，`--headed` |
-| 截图 | 支持 | 支持 | X11 窗口；Wayland 门户 |
-| 剪贴板 | 支持 | 支持 | 支持；Wayland 需要 `wl-clipboard` |
-| 应用与窗口管理 | 支持 | 支持 | 启动/列出；X11 窗口控制 |
-| 通知 | 支持 | 支持 | GNOME Shell |
+<PlatformCapabilities />
 
 CLI 在每个平台上都是同一套 60 个命令名。运行在你这个平台上的完整能力表，由
 `agent-desktop skills get platform` 直接输出。

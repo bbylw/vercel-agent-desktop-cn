@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./component
 import { LinkButton } from "./components/ui/link-button";
 import Render from "./components/Render.astro";
 import { PackageManagers } from "./components/ui/package-managers";
+import PlatformCapabilities from "./components/PlatformCapabilities.astro";
 import { Step, Steps } from "./components/ui/steps";
 import { Tabs, TabItem } from "./components/ui/tabs";
 
@@ -26,6 +27,7 @@ export const components = {
   CollapsibleTrigger,
   LinkButton,
   PackageManagers,
+  PlatformCapabilities,
   Render,
   Step,
   Steps,
