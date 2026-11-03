@@ -35,11 +35,11 @@ function initPackageManager(container: HTMLElement): () => void {
           copied = false;
         }
         btn.replaceChildren(cloneIcon(copied ? checkTpl : (failTpl ?? copyTpl)));
-        btn.setAttribute("aria-label", copied ? "Copied" : "Couldn't copy");
+        btn.setAttribute("aria-label", copied ? "已复制" : "复制失败");
         if (handlerInfo.timer) window.clearTimeout(handlerInfo.timer);
         handlerInfo.timer = window.setTimeout(() => {
           btn.replaceChildren(cloneIcon(copyTpl));
-          btn.setAttribute("aria-label", "Copy to clipboard");
+          btn.setAttribute("aria-label", "复制到剪贴板");
         }, 1500);
       },
     };

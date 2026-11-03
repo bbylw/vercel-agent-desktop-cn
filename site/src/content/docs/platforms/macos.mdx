@@ -3,8 +3,8 @@ title: macOS
 description: AX API、辅助功能权限，以及权限缺失时你会看到什么。
 ---
 
-macOS 上 agent-desktop 走系统的 AX API。它只需要一个前提：运行 agent-desktop 的那个终端
-（或代理宿主进程）持有「辅助功能」权限。
+macOS 上 agent-desktop 走系统的 AX API。前提是「辅助功能」权限：授予运行 agent-desktop 的
+那个应用（Terminal、iTerm2、Warp、VS Code 或代理宿主），不是二进制文件本身。
 
 ## 系统要求
 
@@ -13,36 +13,41 @@ macOS 13 或更高，Intel 或 Apple Silicon 都可以。
 ## 授予权限
 
 ```bash
-agent-desktop permissions --guide
+agent-desktop permissions          # 只报告状态
+agent-desktop permissions --request # 让系统弹出授权请求
+agent-desktop permissions --guide   # 打开系统设置并给出引导面板
 ```
 
-它会把你需要点开的地方指出来。路径是 *系统设置 → 隐私与安全性 → 辅助功能*，
-把运行 agent-desktop 的终端勾上。
+`--guide` 只覆盖辅助功能与屏幕录制。自动化权限需要 `--request` 触发，
+没有弹窗时它报 `unknown`。路径是 *系统设置 → 隐私与安全性*：把启动 agent-desktop 的应用
+勾进「辅助功能」；截屏需要「屏幕录制」；打开通知中心需要允许该应用控制 System Events。
 
-<Aside type="caution" title="授权对象是终端，不是二进制">
-  权限挂在发起调用的那个进程上。换一个终端、换一种启动方式（比如从代理宿主而不是 Terminal.app
-  里调用），就要重新授予一次。
+<Aside type="caution" title="授权对象是启动方，不是二进制">
+  权限挂在发起调用的那个应用上。换一个终端、换一种启动方式（比如从代理宿主而不是 Terminal.app
+  里调用），就要重新授予一次。macOS 27 起，「辅助功能」列表改名为 Device Control and Data Access。
 </Aside>
 
 ## 没有权限时
 
-读不到界面通常表现为**空树**而不是报错。所以先跑一次：
+可能返回 `PERM_DENIED`，也可能只是读不到界面或读数稀疏。先跑一次：
 
 ```bash
-agent-desktop status
+agent-desktop permissions
 ```
 
-`data` 里的权限状态不正常时，先解决权限，再怀疑命令写错了。
+`accessibility` 不是 `granted` 时先解决权限，再怀疑命令写错了。授权后不需要重启终端，
+下一次调用就会看到新的状态。
 
 ## Dock 与菜单栏
 
-外壳界面这一层，macOS 上可以打开的是 Dock 和菜单栏附加项：
+外壳界面这一层，macOS 上可以打开的是 Dock 与菜单栏附加项：
 
 ```bash
 agent-desktop open-system-surface --help
 ```
 
-`--help` 会列出当前支持的名字。
+`--help` 会列出当前支持的名字。应用自己的菜单用 `--surface menubar`，
+sheet、popover、alert 等界面用 `list-surfaces` 查看。见[界面](/concepts/surfaces/)。
 
 ## 能力表
 
@@ -50,12 +55,16 @@ agent-desktop open-system-surface --help
 |---|---|
 | 可访问性树 | 支持 |
 | 点击 / 输入 / 键盘 | 支持 |
-| 鼠标输入 | 支持 |
-| 截图 | 支持 |
+| 鼠标输入 | 支持（双击、三击、拖拽需要 `--headed`） |
+| 截图 | 支持，需要「屏幕录制」 |
 | 剪贴板 | 支持 |
 | 应用与窗口管理 | 支持 |
-| 通知 | 支持 |
-| 外壳界面 | Dock、菜单栏附加项 |
+| 通知 | 支持，通知中心需要 System Events 的自动化权限 |
+| 外壳界面 | 窗口、菜单、menubar、sheet、popover、alert、Dock、菜单栏附加项 |
+
+`--headed` 下点击、输入和滚动以物理事件优先。`launch` 接受显示名或 bundle ID。
+ref 携带元素自己的地址，同名「删除」按钮各自作用于自己那一行；元素被移除或应用重启后
+ref 返回 `STALE_REF`，不会退化为按外观重新查找。规则见[快照与 ref](/concepts/snapshots-and-refs/)。
 
 这台机器上的完整能力表由二进制自己给出：
 

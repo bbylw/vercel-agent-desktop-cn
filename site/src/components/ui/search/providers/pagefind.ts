@@ -82,7 +82,7 @@ export const provider: SearchProvider = {
     );
     const results = await Promise.all(search.results.slice(0, 10).map((result) => result.data()));
     return results.map((result): SearchResult => ({
-      title: result.meta?.title ?? "Untitled",
+      title: result.meta?.title ?? "无标题",
       url: result.url,
       snippet: result.excerpt,
       subResults: result.sub_results

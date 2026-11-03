@@ -26,7 +26,7 @@ agent-desktop skills get platform
 |---|---|---|---|
 | 系统 | macOS 13 或更高 | Windows 10 1809 或更高，或 Windows Server 2019 或更高 | Ubuntu 24.04 或更高（glibc 2.35 起） |
 | 架构 | Intel 或 Apple Silicon | x64 或 ARM64 | x86_64 或 aarch64 |
-| 授权 | 运行 agent-desktop 的应用需要「辅助功能」权限 | 对终端同级完整性的应用无需额外授权 | 用户自己的图形会话，以及运行中的 AT-SPI 总线 |
+| 授权 | 运行 agent-desktop 的应用需要「辅助功能」权限；截屏另需「屏幕录制」 | 对终端同级完整性的应用无需额外授权 | 用户自己的图形会话，以及运行中的 AT-SPI 总线 |
 
 ## 能力对照
 
@@ -35,11 +35,11 @@ agent-desktop skills get platform
 | 可访问性树 | 支持 | 支持 | 支持（AT-SPI） |
 | 点击 / 输入 / 键盘 | 支持 | 支持 | AT-SPI；X11 / GNOME 按键 |
 | 鼠标输入 | 支持 | 支持 | X11，`--headed` |
-| 截图 | 支持 | 支持 | X11 窗口；Wayland 门户 |
+| 截图 | 支持，需要「屏幕录制」 | 支持 | X11 窗口；Wayland 门户 |
 | 剪贴板 | 支持 | 支持 | 支持；Wayland 需要 `wl-clipboard` |
 | 应用与窗口管理 | 支持 | 支持 | 启动/列出；X11 窗口控制 |
-| 通知 | 支持 | 支持 | GNOME Shell |
-| 外壳界面（`open-system-surface`） | Dock、菜单栏附加项 | 支持 | GNOME 托盘、操作中心 |
+| 通知 | 支持；通知中心需要 System Events 的自动化权限 | 支持 | GNOME Shell |
+| 外壳界面（`open-system-surface`） | Dock、菜单栏附加项 | 任务栏、系统托盘、开始菜单、操作中心 | 仅 `system-tray` 与 `action-center` 可用 |
 
 `key-down`、`key-up`、`mouse-down`、`mouse-up` 四个命令名在所有平台上都失败关闭，
 原因见[错误与恢复](/output/errors/)。

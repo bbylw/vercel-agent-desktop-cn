@@ -10,13 +10,13 @@ import PaginationKey from "./PaginationKey.astro";
 interface Props extends Omit<HTMLAttributes<"a">, "rel"> {
   rel: "prev" | "next";
   href: string;
-  /** Caption above the title. Defaults to "Previous" or "Next". */
+  /** Caption above the title. Defaults to "上一篇" or "下一篇". */
   label?: string;
 }
 
 const { rel, href, label, class: className, ...attrs } = Astro.props;
 const isNext = rel === "next";
-const caption = label ?? (isNext ? "Next" : "Previous");
+const caption = label ?? (isNext ? "下一篇" : "上一篇");
 ---
 
 <a

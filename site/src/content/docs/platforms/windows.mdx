@@ -3,8 +3,8 @@ title: Windows
 description: UI Automation、完整性级别，以及为什么有些应用的树读不到。
 ---
 
-Windows 上 agent-desktop 走 UI Automation。它的好处是没有额外的授权步骤——
-代价是一条完整性规则决定了它能不能看见某个应用。
+Windows 上 agent-desktop 走 UI Automation。它没有额外的授权步骤，
+代价是一条完整性规则决定了它能对一个应用做什么。
 
 ## 系统要求
 
@@ -13,20 +13,33 @@ Windows 10 1809 或更高，或 Windows Server 2019 或更高，x64 或 ARM64，
 
 ## 完整性级别
 
-对你终端同级完整性（integrity level）的应用无需额外授权。
+和终端同级完整性（integrity level）的应用无需额外授权。
 
-<Aside type="caution" title="要操作管理员进程，终端也必须是管理员">
-  以管理员身份运行的应用处在更高的完整性级别。低完整性的终端读不到它的可访问性树。
+<Aside type="caution" title="管理员进程：能读，不能操作">
+  以管理员身份运行的应用可以被低完整性的终端读取，但只有同样提权的代理才能向它发送输入。
   需要操作这类应用时，用管理员身份启动终端。
 </Aside>
 
 读不到时的表现通常是树为空或元素缺失，而不是一个明确的权限错误，
-所以先跑 `agent-desktop status` 确认环境。
+所以先跑 `agent-desktop permissions`，确认权限报告和环境正常。
 
 ## 桌面
 
 必须在已登录用户的交互式桌面上。会话被锁定、或者进程跑在非交互的窗口站里，
 界面本身就不存在，可访问性树自然读不到。
+
+## 启动应用
+
+`launch` 只接受绝对路径，或 System32、Windows 目录下的裸文件名（可带可不带 `.exe`）。
+它不能把显示名解析成可执行文件：`launch "Google Chrome"` 不行，
+要给出 `chrome.exe` 的完整路径。
+
+## 外壳界面
+
+`list-surfaces` 列出每个进程的 `window`、`focused`、`sheet` 和 `menu`。
+`snapshot --surface` 还能在不加 `--app` 时读取 `taskbar`、`system-tray`、
+`system-tray-overflow`、`start-menu` 和 `action-center`。`quick-settings` 返回
+`INVALID_ARGS`，并提示改用承载这些控件的 `action-center`。
 
 ## 能力表
 
@@ -39,10 +52,12 @@ Windows 10 1809 或更高，或 Windows Server 2019 或更高，x64 或 ARM64，
 | 剪贴板 | 支持 |
 | 应用与窗口管理 | 支持 |
 | 通知 | 支持 |
-| 外壳界面 | 支持 |
+| 外壳界面 | 窗口、菜单、任务栏、系统托盘、开始菜单、操作中心 |
 
-`launch` 的行为和界面相关的细节在仓库的 `docs/install.md#platform-notes` 里，
-也可以直接读本机的能力表：
+二进制未签名，从浏览器下载可能触发 SmartScreen 或被杀毒软件隔离，npm 路径不会。
+详见[安装与权限](/start/install/)。
+
+本机能力表由二进制自己给出：
 
 ```bash
 agent-desktop skills get platform

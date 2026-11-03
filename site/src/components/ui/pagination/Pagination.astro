@@ -29,8 +29,8 @@ interface Props extends HTMLAttributes<"nav"> {
 
 const {
   prevNext,
-  prevLabel = "Previous",
-  nextLabel = "Next",
+  prevLabel = "上一篇",
+  nextLabel = "下一篇",
   keys = true,
   class: className,
   ...attrs
@@ -41,7 +41,7 @@ const next = composed ? undefined : prevNext?.next;
 ---
 
 {(composed || prev || next) && (
-  <nav aria-label="Pagination" data-slot="pagination" class={cn("mt-12", className)} {...attrs}>
+  <nav aria-label="分页" data-slot="pagination" class={cn("mt-12", className)} {...attrs}>
     <div
       data-nb-pagination
       data-slot="pagination-bar"

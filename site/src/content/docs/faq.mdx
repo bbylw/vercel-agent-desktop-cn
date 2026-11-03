@@ -13,8 +13,11 @@ agent-desktop permissions
 agent-desktop list-apps
 ```
 
-- **macOS**：辅助功能权限要授予*运行 agent-desktop 的那个终端*，见 [macOS](/platforms/macos/)。
-- **Windows**：目标是管理员进程时，终端也必须以管理员身份运行，见 [Windows](/platforms/windows/)。
+- **macOS**：辅助功能权限要授予*运行 agent-desktop 的那个应用*。截图还需要「屏幕录制」，
+  打开通知中心还需要 System Events 的自动化权限。权限缺失时命令可能返回 `PERM_DENIED`，
+  也可能表现为读不到元素，见 [macOS](/platforms/macos/)。
+- **Windows**：和终端同级完整性的应用无需授权；以管理员身份运行的应用可以读，
+  但只有同样提权的代理才能向它发送输入，见 [Windows](/platforms/windows/)。
 - **Linux**：需要用户自己的图形会话和一条工作中的 AT-SPI 总线，`at-spi2-core` 要装上，
   见 [Linux](/platforms/linux/)。
 
@@ -35,12 +38,22 @@ PowerShell 用户还会碰到另一种 `INVALID_ARGS`：不加引号的 `@token`
 
 ## `AMBIGUOUS_TARGET`
 
-目标同时命中多个对象，最常见的是应用开了多个窗口。候选窗口 id 在 `error.details` 里，
+先读 `error.details.kind`，它区分两种完全不同的情况。
+
+**ref 身份不唯一**：`saved_ref_ambiguous` 表示捕获之后出现了完全相同的元素；
+`identity_not_unique` 表示捕获时就没有证明 ref 唯一，或者窗口没能在快照超时内读完。
+重新快照不会解决双胞胎，换一个在窗口内唯一的控件；只是超时的话，用更大的
+`--timeout-ms` 重拍。确实需要点其中一个双胞胎时，只能用
+`agent-desktop --headed mouse-click --xy X,Y`，Linux Wayland 会话不支持。
+
+**多窗口目标歧义**：用 `--app` 选目标时应用开了多个窗口，`error.details` 会列出候选窗口 id，
 用 `--window-id` 指定其中一个：
 
 ```bash
 agent-desktop snapshot --app Finder --window-id w-204749 -i
 ```
+
+规则和 `details.kind` 的完整列表见[快照与 ref](/concepts/snapshots-and-refs/)。
 
 ## 什么时候可以重试
 
@@ -84,12 +97,17 @@ agent-desktop is @s8f3k2p9:e6        # 只判断一个状态
 
 ## 从源码构建失败
 
-每个平台的适配器只能在它自己的操作系统上构建。确认你只把宿主平台对应的包传给了 cargo：
+先确认工具链：Rust 1.89 或更高；macOS 需要 Xcode 命令行工具，Windows 需要 MSVC 构建工具，
+Linux 需要一个 C 链接器。每个平台的适配器只能在它自己的操作系统上构建：
 
 ```bash
-HOST_PKGS=(-p agent-desktop-core -p agent-desktop-macos -p agent-desktop -p agent-desktop-ffi)
-cargo test "${HOST_PKGS[@]}"
-cargo clippy "${HOST_PKGS[@]}" --all-targets -- -D warnings
+cargo build --release -p agent-desktop
+```
+
+在 Linux 上还要构建平台辅助程序，并把 `agent-desktop-linux-clipboard-owner` 放在 CLI 旁边：
+
+```bash
+cargo build --release -p agent-desktop-linux --bins
 ```
 
 所有关卡列在仓库的 `CONTRIBUTING.md`。跨平台调用见[构建与链接](/c-library/build/)。

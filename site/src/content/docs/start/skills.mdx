@@ -40,7 +40,8 @@ npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-deskto
 
 - 错误带有 `code`、`disposition`，通常还有 `suggestion`。
 - **只有当 `error.disposition.retry` 为 `safe` 时才重试。** 其他取值意味着重试会让情况更糟。
-- 退出码与命令是否成功是两件事，解析输出请以 `ok` 为准。
+- 退出码用于粗筛：`0` 成功，`1` 结构化错误（`ok: false`），`2` 命令行解析错误。
+  最终判断仍以信封里的 `ok` 与 `error` 为准。
 
 完整的信封结构、错误码与退出码见 [JSON 输出契约](/output/) 和
 [错误与恢复](/output/errors/)。

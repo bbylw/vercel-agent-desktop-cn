@@ -38,6 +38,8 @@ const renderer = await createCardRenderer({
   fonts: [
     { name: "Inter", source: font("Inter-Regular.ttf"), weight: 400 },
     { name: "Inter", source: font("Inter-Medium.ttf"), weight: 500 },
+    { name: "Noto Sans SC", source: font("NotoSansSC-Regular.otf"), weight: 400 },
+    { name: "Noto Sans SC", source: font("NotoSansSC-Medium.otf"), weight: 500 },
   ],
   emoji: "strip",
 });

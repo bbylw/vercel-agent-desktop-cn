@@ -10,9 +10,9 @@
     "typecheck": "astro check",
     "lint:docs": "nimbus-docs lint",
     "lint:docs:fix": "nimbus-docs lint --fix",
-    "prepreview:cf": "astro build",
+    "prepreview:cf": "astro build && pagefind --site dist",
     "preview:cf": "wrangler dev",
-    "predeploy": "astro check && astro build",
+    "predeploy": "astro check && astro build && pagefind --site dist",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
@@ -21,7 +21,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@iconify-json/ph": "^1.2.0",
     "@resvg/resvg-js": "^2.6.2",
-    "astro": "7.3.3",
+    "astro": "7.4.5",
     "clsx": "^2.1.1",
     "satori": "^0.26.0",
     "sharp": "^0.35.4",
@@ -31,7 +31,7 @@
     "@astrojs/check": "^0.9.8",
     "@astrojs/language-server": "2.16.13",
     "@tailwindcss/vite": "^4.1.4",
-    "pagefind": "^1.5.2",
+    "pagefind": "^1.6.0",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "wrangler": "^4.95.0"

@@ -33,6 +33,13 @@ description: 在 macOS、Windows 和 Linux 上安装 agent-desktop，校验下�
   </TabItem>
 </Tabs>
 
+<Aside type="note" title="npm 12 默认拦截安装脚本">
+  包内的原生二进制和平台辅助程序不受影响。`postinstall` 负责把 Node 启动器换成原生二进制链接：
+  执行后每次调用约 21ms，未执行时走 Node 启动器，约 146ms。npm 12 默认拦截安装脚本；
+  确认来源可信后，用 `npm install-scripts approve agent-desktop` 或安装时加 `--allow-scripts`。
+  部分包管理器会保留自己的启动器。
+</Aside>
+
 ```bash
 agent-desktop version
 ```
@@ -43,6 +50,12 @@ agent-desktop version
 下载对应平台的原生压缩包，把它的辅助程序和可执行文件放在同一个目录里，
 然后确认这个目录在 `PATH` 上。
 
+发布页的校验和只能发现损坏，不能证明来源。需要验证来源时，用 GitHub 的构建证明：
+
+```bash
+gh attestation verify <downloaded-archive> --repo vercel-labs/agent-desktop
+```
+
 <Aside type="caution" title="Homebrew 与 Scoop 还没就绪">
   官方 Homebrew 与 Scoop 软件包正在提交审核，目前无法从默认目录安装。
   仓库也不再维护自定义的 Homebrew tap 或 Scoop bucket。
@@ -50,28 +63,30 @@ agent-desktop version
 
 ## 授予权限
 
-三个平台的前置条件不一样，缺了会表现为读不到界面而不是报错，所以先跑一次权限检查。
+三个平台的前置条件不一样。缺了可能返回 `PERM_DENIED`，也可能表现为读不到界面或元素，
+所以先跑一次权限检查。
 
 <Tabs>
   <TabItem label="macOS">
-    需要「辅助功能」权限。让工具把路径指给你，然后到 *系统设置 → 隐私与安全性 → 辅助功能* 里勾选运行
-    agent-desktop 的那个终端。
+    需要「辅助功能」权限；截图额外需要「屏幕录制」，打开通知中心需要 System Events 的
+    「自动化」权限。权限授予*运行 agent-desktop 的终端或代理宿主进程*，不是二进制本身。
 
     ```bash
-    agent-desktop permissions --guide
+    agent-desktop permissions          # 只报告状态，不弹窗
+    agent-desktop permissions --request # 请求缺失的权限
+    agent-desktop permissions --guide   # 打开系统设置
     ```
-
-    没有授权时快照会返回空树，而不是崩溃。
   </TabItem>
   <TabItem label="Windows">
-    对你终端同级完整性（integrity level）的应用无需额外授权。要操作以管理员身份运行的应用，
-    终端也必须以管理员身份运行，否则那棵可访问性树读不到。
+    和终端同级完整性（integrity level）的应用无需额外授权。以管理员身份运行的应用可以读，
+    但只有同样提权的代理才能向它发送输入。
     ```bash
     agent-desktop permissions
     ```
   </TabItem>
   <TabItem label="Linux">
-    需要用户自己的图形会话，以及 `at-spi2-core`。会话总线不在时，AT-SPI 一棵树也读不出来。
+    主要目标是 Ubuntu 24.04 及更高版本、GNOME 46，glibc 2.35 起。需要用户自己的图形会话，
+    以及 `at-spi2-core`。会话总线不在时，AT-SPI 一棵树也读不出来。
 
     ```bash
     sudo apt install at-spi2-core
@@ -82,33 +97,60 @@ agent-desktop version
   </TabItem>
 </Tabs>
 
+<Aside type="caution" title="Windows 二进制未签名">
+  从浏览器下载或直接运行原生二进制时，SmartScreen 可能警告，杀毒软件可能隔离，
+  全新安装的 Windows 11 还可能被 Smart App Control 拦截。npm 安装路径不触发 SmartScreen。
+</Aside>
+
 ## 确认装好了
 
-`status` 会把平台、权限状态和这个平台上支持的界面一次报给你。
+`permissions` 报出三项权限，每项是 `granted`、`denied`、`not_required` 或 `unknown`；
+缺失时附带 `suggestion`。
 
 ```bash
-agent-desktop status
+agent-desktop permissions
 ```
 
 ```json
 {
   "version": "2.6",
   "ok": true,
-  "command": "status",
+  "command": "permissions",
   "data": {
-    "platform": "macos",
-    "accessibility": "granted",
-    "headed": false
+    "accessibility": { "state": "granted" },
+    "screen_recording": { "state": "denied", "suggestion": "..." },
+    "automation": { "state": "not_required" }
   }
 }
+```
+
+`status` 在此基础上再报出适配器健康状态、平台、`supported_surfaces`、最近的快照
+（`snapshot_id` 与 `ref_count`）、`session_id`、`tracing` 和 `state_root`。
+
+```bash
+agent-desktop status
 ```
 
 每条命令都打印这样一个信封，结构见 [JSON 输出契约](/output/)。
 
 ## 从源码构建
 
-每个平台的适配器只能在它自己的操作系统上构建，所以把 cargo 的范围限制在宿主平台对应的包上。
-在 macOS 上：
+需要 Rust 1.89 或更新版本，外加平台工具链：macOS 13+ 上的 Xcode 命令行工具、
+Windows 上的 MSVC 构建工具，或 Linux 上的 C 链接器。
+
+```bash
+git clone https://github.com/vercel-labs/agent-desktop && cd agent-desktop
+cargo build --release -p agent-desktop
+```
+
+Linux 还要构建辅助程序，并让 `agent-desktop-linux-clipboard-owner` 和 CLI 放在同一目录：
+
+```bash
+cargo build --release -p agent-desktop-linux --bins
+```
+
+每个平台的适配器只能在它自己的操作系统上构建，所以测试和 lint 要把 cargo 的范围限制在
+宿主平台对应的包上。在 macOS 上：
 
 ```bash
 HOST_PKGS=(-p agent-desktop-core -p agent-desktop-macos -p agent-desktop -p agent-desktop-ffi)

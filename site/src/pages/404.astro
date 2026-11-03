@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
 import { withBase } from "@cloudflare/nimbus-docs/runtime";
 
-// Prerender the 404 so it stays a static route under `output: "server"`.
+// Prerender the 404 so it stays a static route under `output: "static"`.
 // Hosts serve it via their not-found handling (e.g. Cloudflare
 // `not_found_handling: "404-page"`); the adapter adds no on-demand route.
 export const prerender = true;

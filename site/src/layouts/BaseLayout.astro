@@ -98,7 +98,7 @@ const resolvedMarkdownUrl =
           root.style.colorScheme = mode;
           document.querySelectorAll("[data-nb-theme-toggle]").forEach((b) => {
             b.setAttribute("data-nb-state", mode);
-            b.setAttribute("aria-pressed", String(mode === "dark"));
+            b.setAttribute("aria-label", mode === "dark" ? "切换到浅色模式" : "切换到深色模式");
           });
         };
 
@@ -140,9 +140,8 @@ const resolvedMarkdownUrl =
       href="#main-content"
       class="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-100 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:no-underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
     >
-      Skip to content
-    </a>
-    {!isHiddenVersion && (
+      跳到正文
+    </a>    {!isHiddenVersion && (
       <AgentDirective markdownUrl={resolvedMarkdownUrl ?? null} llmsUrl={llmsUrl} />
     )}
     <slot />

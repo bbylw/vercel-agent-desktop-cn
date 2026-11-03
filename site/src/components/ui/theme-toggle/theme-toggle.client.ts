@@ -23,15 +23,16 @@ function initThemeToggle(button: HTMLElement): () => void {
       // choice for this page.
       window.__nbApplyTheme?.(mode);
     }
-    syncPressed();
+    syncLabel();
   }
 
-  function syncPressed() {
-    button.setAttribute("aria-pressed", String(document.documentElement.dataset.mode === "dark"));
+  function syncLabel() {
+    const dark = document.documentElement.dataset.mode === "dark";
+    button.setAttribute("aria-label", dark ? "切换到浅色模式" : "切换到深色模式");
   }
 
   window.__nbApplyTheme?.();
-  syncPressed();
+  syncLabel();
   button.addEventListener("click", handleClick);
   return () => button.removeEventListener("click", handleClick);
 }

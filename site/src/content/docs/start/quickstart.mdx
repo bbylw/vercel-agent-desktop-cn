@@ -73,8 +73,9 @@ agent-desktop snapshot --app Finder -i
 ```
 
 <Aside type="note" title="ref 属于产生它的那次快照">
-  只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`。界面发生变化时，操作会返回
-  `STALE_REF` 或 `AMBIGUOUS_TARGET`——重新快照，并使用新快照里的 ref。
+  只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`。界面变化后，操作会返回 `STALE_REF`，
+  这时重新快照并使用新 ref。遇到 `AMBIGUOUS_TARGET` 要先看 `details.kind`：
+  双胞胎元素换唯一控件，超时导致的身份未证明则用更大的 `--timeout-ms` 重拍。
   规则见[快照与 ref](/concepts/snapshots-and-refs/)。
 </Aside>
 
@@ -92,8 +93,8 @@ agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact      # 深入其中一�
 
 ## 有多个窗口时
 
-同一应用开了多个窗口，操作会返回 `AMBIGUOUS_TARGET`，并把候选窗口 id 放在
-`error.details` 里。用 `--window-id` 指定其中一个：
+同一应用开了多个窗口，用 `--app` 选目标会返回 `AMBIGUOUS_TARGET`，并把候选窗口 id 放在
+`error.details` 里。这是目标选择歧义，和 ref 身份歧义不同；用 `--window-id` 指定其中一个：
 
 ```bash
 agent-desktop snapshot --app Finder --window-id w-204749 -i

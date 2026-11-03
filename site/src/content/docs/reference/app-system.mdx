@@ -21,8 +21,9 @@ description: launch 到 batch——管理目标应用、控制窗口，以及查
 | `open-system-surface` | 打开外壳界面（Dock、菜单栏附加项、托盘、操作中心） |
 
 `snapshot` 和动作类命令用 `--app` 与 `--window-id` 选目标。一个应用有多个窗口时，
-操作会返回 `AMBIGUOUS_TARGET`，候选窗口 id 放在 `error.details` 里，见
-[错误与恢复](/output/errors/)。
+目标选择会返回 `AMBIGUOUS_TARGET`，候选窗口 id 放在 `error.details` 里，用 `--window-id`
+指定其中一个。这里说的是窗口歧义；ref 自身身份不唯一是另一种 `AMBIGUOUS_TARGET`，
+处理方式见[快照与 ref](/concepts/snapshots-and-refs/)。
 
 ## 剪贴板
 

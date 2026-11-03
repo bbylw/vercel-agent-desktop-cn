@@ -30,6 +30,16 @@ agent-desktop 的每条命令只打印一个 JSON 信封，然后退出。没有
 | `command` | 被执行的命令名。 |
 | `data` | 这条命令自己的载荷，结构由命令决定。 |
 
+`ok: true` 只表示命令返回了成功结果，不表示界面效果已经被验证。动作类命令会在
+`data.disposition` 里说明交付情况，详见下面的 disposition。
+
+<Aside type="note" title="快照可能是一份明确的部分结果">
+  从 2.2 起，快照预算耗尽不再返回 `TIMEOUT` 和空结果，而是返回 `ok: true`、
+  `complete: false`，并带上已观察到的树、`truncated: true` 和 `nodes_observed`。
+  被截断的节点带有 `subtree_truncated: true`。判断树是否完整，始终读 `data.complete`；
+  不要再用 `TIMEOUT` 判断快照是否过大。
+</Aside>
+
 ## 失败
 
 ```json
@@ -39,10 +49,17 @@ agent-desktop 的每条命令只打印一个 JSON 信封，然后退出。没有
   "command": "click",
   "error": {
     "code": "STALE_REF",
-    "message": "快照 s8f3k2p9 已被更新的界面取代",
-    "disposition": { "retry": "unsafe" },
-    "suggestion": "重新运行 snapshot，并使用新快照里的 ref",
-    "details": { "snapshot_id": "s8f3k2p9" }
+    "message": "@s8f3k2p9:e7 not found in current RefMap",
+    "suggestion": "Re-run a snapshot to obtain fresh refs, then retry with the new ref",
+    "recovery": {
+      "strategy": "refresh_snapshot_then_retry_original",
+      "retryable": true,
+      "requires_fresh_snapshot": true
+    },
+    "disposition": {
+      "delivery": "not_delivered",
+      "retry": "safe"
+    }
   }
 }
 ```
@@ -51,32 +68,54 @@ agent-desktop 的每条命令只打印一个 JSON 信封，然后退出。没有
 |---|---|
 | `code` | 机器可读的错误码，见[错误与恢复](/output/errors/)。 |
 | `message` | 给人读的一句话。不要拿它做分支判断。 |
-| `disposition` | 这次失败的处置方式，其中 `retry` 是最关键的一项。 |
-| `suggestion` | 通常存在的下一步建议。代理可以直接照它行动。 |
-| `details` | 可选。`AMBIGUOUS_TARGET` 在这里列出候选窗口 id。 |
+| `disposition` | 这次失败的处置方式，包含 `delivery` 与 `retry`。**总是存在。** |
+| `suggestion` | 可选。写成可以直接照做的下一步。 |
+| `recovery` | 可选。只在 `disposition.retry` 为 `safe` 时出现，给出结构化的恢复策略。 |
+| `details` | 可选。错误相关的结构化细节，例如 ref 身份失败的 `details.kind`。 |
+
+`error.code`、`error.message` 和 `error.disposition` 总是存在；`suggestion`、`recovery`、
+`platform_detail` 和 `details` 为空时省略。`recovery.retry_after_ms` 只在 `TIMEOUT` 和
+`APP_UNRESPONSIVE` 时出现。
+
+## disposition 怎么读
+
+`disposition.delivery` 说明动作有没有送达，`disposition.retry` 说明能不能重试：
+
+- `delivery: "not_delivered"` —— 确定没有送达，对应 `retry: "safe"`。
+- `delivery: "delivered_unverified"` / `"delivered_verified"` / `"delivery_uncertain"` ——
+  可能已经送达或已经送达，对应 `retry: "unsafe"`。
+- `delivery: "unknown"` —— 这次调用没有建立任何交付证据，`retry` 也是 `unknown`。
+  不要自动重试。
+
+`retry` 不是独立判断出来的：`not_delivered` 对应 `safe`，其他非 `unknown` 取值对应
+`unsafe`。只读命令的失败、参数错误和 `APP_NOT_FOUND` 这类在发送前就失败的查找，都会是
+`not_delivered`。
 
 <Aside type="caution" title="只有 retry 为 safe 时才重试">
   重试一个已经落下去的动作会把它做两遍。`disposition.retry` 就是用来告诉你这一点的：
-  只有取值为 `safe` 时重试才是正确的处置。
+  只有取值为 `safe` 时，自动重试才是正确的处置。`recovery` 也只在 `safe` 时出现，
+  不要执行旧版本信封里的命令字符串。
 </Aside>
 
 ## 退出码
 
-退出码用于让 shell 脚本粗筛，细判断仍然要读信封。它和 `ok` 不是一回事：
-一条命令可以正常退出并在 `ok: false` 里报告一个业务层面的失败。
+退出码用于让 shell 脚本粗筛，细判断仍然要读信封：
 
-完整对照表在仓库的 `docs/json-output.md`，也可以让代理自己读：
+| 退出码 | 含义 |
+|---|---|
+| `0` | 成功。 |
+| `1` | 结构化错误。JSON 信封仍然打印在 stdout。 |
+| `2` | 命令行解析错误。信封仍然打印，`error.code` 为 `INVALID_ARGS`。 |
 
-```bash
-agent-desktop skills get desktop
-```
+`ok: false` 对应退出码 `1`，不会以 `0` 退出。需要区分错误类型时读 `error.code`；
+需要决定要不要重试时读 `error.disposition.retry`。
 
 ## 解析建议
 
 - 一次调用读一个对象，不要按行切日志。
 - 判断成败只看 `ok`；需要人类可读原因时看 `error.message`。
 - 需要程序分支时看 `error.code`，需要决定要不要重试时看 `error.disposition.retry`。
-- 快照相关字段（`complete`、`ref_count`）在读完之后立刻决定是否要下钻。
+- 快照相关字段（`complete`、`identity_unproven`）在读完之后立刻决定是否要下钻或重拍。
 
 - [错误与恢复](/output/errors/)：错误码逐个说明。
-- [快照与 ref](/concepts/snapshots-and-refs/)：`snapshot_id` 与 ref 的关系。
+- [快照与 ref](/concepts/snapshots-and-refs/)：`snapshot_id`、ref 身份与失效规则。

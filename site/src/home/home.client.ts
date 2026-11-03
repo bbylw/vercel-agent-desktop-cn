@@ -36,23 +36,33 @@ function initLoop(): void {
     const panels = Array.from(root.querySelectorAll<HTMLElement>("[role='tabpanel']"));
     if (!tabs.length || tabs.length !== panels.length) return;
 
-    function select(index: number): void {
-      tabs.forEach((tab, i) => tab.setAttribute("aria-selected", String(i === index)));
+    function select(index: number, focusTab = false): void {
+      tabs.forEach((tab, i) => {
+        const selected = i === index;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
       panels.forEach((panel, i) => {
         panel.hidden = i !== index;
       });
+      if (focusTab) tabs[index]?.focus();
     }
+
+    // Roving tabindex：只有选中的标签在 Tab 序里，方向键负责移动。
+    select(0);
 
     tabs.forEach((tab, i) => {
       tab.addEventListener("click", () => select(i));
-      // 横向/纵向排列都支持：左右键沿列表移动，并把焦点交给选中的标签。
       tab.addEventListener("keydown", (e) => {
-        const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-        if (!step) return;
+        const last = tabs.length - 1;
+        let next: number | undefined;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (i + 1) % tabs.length;
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") next = 0;
+        else if (e.key === "End") next = last;
+        if (next === undefined) return;
         e.preventDefault();
-        const next = (i + step + tabs.length) % tabs.length;
-        tabs[next]?.focus();
-        select(next);
+        select(next, true);
       });
     });
   });

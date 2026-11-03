@@ -2,7 +2,7 @@ import { getOgImagePages, getPageSection } from "@cloudflare/nimbus-docs/runtime
 import type { APIRoute, GetStaticPaths } from "astro";
 import { renderPageCard } from "./_card";
 
-// Prerender every card as a static asset so `output: "server"` doesn't turn
+// Prerender every card as a static asset so `output: "static"` doesn't turn
 // image generation into an on-demand route.
 export const prerender = true;
 

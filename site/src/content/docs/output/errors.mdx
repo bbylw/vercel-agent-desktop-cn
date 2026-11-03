@@ -5,30 +5,69 @@ description: 每个错误码意味着什么，以及代理正确的下一步动�
 
 错误码是机器可读的，`message` 是给人看的。写恢复逻辑时只依赖前者。
 
-## 常见错误码
+## 错误码
 
 | 码 | 含义 | 正确的下一步 |
 |---|---|---|
 | `INVALID_ARGS` | 参数不合法，比如 ref 只写了 `@e8` 没带快照 id | 修正参数再调用；这次调用没有产生任何副作用 |
-| `STALE_REF` | 界面已经变了，ref 属于的那次快照不再有效 | 重新 `snapshot`，使用新快照里的 ref |
-| `AMBIGUOUS_TARGET` | 目标同时命中多个对象，比如应用开了多个窗口 | 读 `error.details` 里的候选，用 `--window-id` 指定一个 |
-| `PERMISSION_DENIED` | 平台权限缺失，比如 macOS 未授予辅助功能 | 运行 `agent-desktop permissions --guide` |
-| `UNSUPPORTED` | 当前平台或当前界面不支持这个动作 | 查 `agent-desktop skills get platform` 的能力表，换一条路径 |
+| `ELEMENT_NOT_FOUND` | 没有元素匹配这个 ref 或查询 | 重新快照或调整 `find` 条件；确认没有多余过滤 |
+| `APP_NOT_FOUND` | 应用没在运行，或者没有窗口 | 用 `list-apps` 确认应用名；先启动应用 |
+| `STALE_REF` | ref 无法在当前界面重新识别 | 重新 `snapshot`，使用新快照里的 ref；读 `details.kind` 区分元素消失与地址失效 |
+| `AMBIGUOUS_TARGET` | ref 身份不唯一，或选目标时命中了多个对象 | 先读 `details.kind`：ref 双胞胎需要窗口内唯一控件或坐标点击；多窗口才用 `--window-id` |
+| `SNAPSHOT_NOT_FOUND` | 快照 id 不存在或已过期 | 重新 `snapshot` |
+| `POLICY_DENIED` | 物理输入或 headed 路径被策略阻止 | 确认是否需要 `--headed`，以及当前策略是否允许物理输入 |
+| `ACTION_FAILED` | 动作被拒绝，或观察到的结果与请求矛盾 | 读 `details` 和 `post_state`；不要盲目重试，先重新观察 |
+| `ACTION_NOT_SUPPORTED` | 目标没有暴露这个动作 | 换一个动作或用另一条路径完成目标 |
+| `APP_UNRESPONSIVE` | 匹配到的应用停止响应 | 等待恢复或重启应用；`recovery.retry_after_ms` 给出建议间隔 |
+| `PLATFORM_NOT_SUPPORTED` | 适配器没有实现这个方法 | 用 `agent-desktop skills get platform` 查当前平台能力 |
+| `TIMEOUT` | 等待条件到期，或实时身份读取到截止时间仍未完成 | 重试或调大超时；快照预算耗尽不是这个错误，见下 |
+| `WINDOW_NOT_FOUND` | 请求的窗口不存在 | 用 `list-windows` 拿到有效窗口 id |
+| `NOTIFICATION_NOT_FOUND` | 通知 id 不存在，或列表已经变化 | 重新 `list-notifications` 并读取指纹 |
+| `INTERNAL` | 未预期错误或捕获到的 panic | 记录命令与信封，按缺陷报告 |
 
-<Aside type="caution" title="动作类错误不要盲目重试">
-  一次 `click` 报错不代表它没有生效。只有当 `error.disposition.retry` 为 `safe`
-  时才重试；否则先重新快照，看清界面现在的状态再决定。
+<Aside type="note" title="快照预算耗尽不是 TIMEOUT">
+  从 2.2 起，快照在预算内没有读完会返回 `ok: true`、`complete: false`，
+  并带上 `truncated`、`nodes_observed` 和已观察到的树。只有 `--root` 下钻在观察不完整时
+  仍然返回 `TIMEOUT`。
 </Aside>
 
 ## disposition 怎么读
 
-`disposition` 描述这次失败的性质，其中最关键的是 `retry`：
+`disposition` 描述这次失败的性质，包含两个字段：
 
-- `safe` —— 这次调用确定没有生效，可以直接重试。
-- 其他取值 —— 重试可能把动作做两遍，或者根本不会改变结果。先重新观察。
+- `delivery`：`unknown`、`not_delivered`、`delivery_uncertain`、`delivered_unverified`
+  或 `delivered_verified`。
+- `retry`：`unknown`、`safe` 或 `unsafe`。`not_delivered` 对应 `safe`，其他非 `unknown`
+  的交付状态对应 `unsafe`。
 
+`unknown` 表示这次调用没有建立任何交付证据，比如一个可能已经落地的动作超时了。
+只读命令、参数错误和 `APP_NOT_FOUND` 这类在发送前失败的查找，都会是 `not_delivered`。
+自动重试前必须看到 `retry` 为 `safe`。
+
+`recovery` 是结构化的恢复策略，只在 `retry` 为 `safe` 时出现；不要执行旧版本信封里的命令字符串。
 `suggestion` 通常存在，并且写成可以直接照做的形式。代理把它当作默认路径，
 只在它有明确理由时才偏离。
+
+## ref 身份失败怎么读
+
+从 2.6 起，Windows、Linux，以及 macOS 上无法取得地址的元素，只有在快照完整读取窗口并证明
+ref 在捕获时唯一，且现在仍恰好有一个元素匹配角色与稳定字段时，才允许解析。失败由
+`details.kind` 区分：
+
+| `details.kind` | 错误码 | 含义 | 下一步 |
+|---|---|---|---|
+| `retained_object_stale` | `STALE_REF` | macOS：记录的元素地址已失效，或进程、角色、标识符不再匹配 | 重新快照，不能用相似元素顶替 |
+| `saved_ref_absent` | `STALE_REF` | 当前界面没有元素匹配记录的角色与稳定字段 | 重新快照 |
+| `saved_ref_ambiguous` | `AMBIGUOUS_TARGET` | 捕获之后出现了完全相同的元素 | 换一个在窗口内唯一的控件；重新快照会同时拒绝两个双胞胎 |
+| `identity_not_unique` | `AMBIGUOUS_TARGET` | 捕获时没有证明 ref 唯一，可能因为存在双胞胎，或窗口没能在超时内读完 | 有双胞胎时换唯一控件或使用 `--headed mouse-click --xy`；只是超时则用更大的 `--timeout-ms` 重拍 |
+| `resolution_identity_unknown` | `TIMEOUT` | 实时字段读不到，身份计数无法完成 | 可重试；重新读取或重新快照 |
+
+`saved_ref_absent`、`saved_ref_ambiguous` 和 `identity_not_unique` 都带
+`details.retryable: false`，且都是 `not_delivered`。它们的 `disposition.retry` 仍然是 `safe`，
+因为什么都没发送；但用同一个 ref 再试一次会得到同样的拒绝。
+
+如果快照的 `data.identity_unproven` 为 `true`，说明这次快照需要一次完整窗口读取来证明 ref，
+但没能完成。它的所有 ref 都会以 `identity_not_unique` 失败；用更大的 `--timeout-ms` 重拍。
 
 ## 失败关闭的命令
 
@@ -47,5 +86,6 @@ description: 每个错误码意味着什么，以及代理正确的下一步动�
 
 ## 下一步
 
-- [JSON 输出契约](/output/)：信封结构与退出码。
+- [JSON 输出契约](/output/)：信封结构、disposition 与退出码。
+- [快照与 ref](/concepts/snapshots-and-refs/)：ref 如何被重新识别，以及失效后的正确动作。
 - [常见问题](/faq/)：现象到原因的对照。

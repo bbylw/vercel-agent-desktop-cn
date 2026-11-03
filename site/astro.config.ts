@@ -5,10 +5,12 @@ import nimbus, {
 } from "@cloudflare/nimbus-docs";
 import { tableScroll } from "@cloudflare/nimbus-docs/markdown";
 
-// 部署前把 site 换成正式域名：canonical URL、OG 图、robots.txt、sitemap 和
-// /llms.txt 里的链接都由它推导。
+// 部署前把 site 换成正式域名（或设置 SITE_URL）：canonical URL、OG 图、robots.txt、
+// sitemap 和 /llms.txt 里的链接都由它推导。
+const site = process.env.SITE_URL ?? "https://agent-desktop.dev";
+
 const nimbusConfig = defineNimbusConfig({
-  site: "https://agent-desktop.dev",
+  site,
   title: "agent-desktop",
   description:
     "面向 AI 代理的电脑操作：读取操作系统可访问性树，把它变成带 ref 的 JSON，再对 ref 执行动作。macOS、Windows、Linux 通用。",
@@ -17,6 +19,7 @@ const nimbusConfig = defineNimbusConfig({
   socialImageAlt: "agent-desktop 文档预览",
   sidebar: {
     indexDisplay: "overview-leaf",
+    overviewLabel: "概览",
     defaultCollapsed: true,
     items: [
       { label: "开始使用", icon: "ph:rocket-launch", autogenerate: { directory: "start" } },

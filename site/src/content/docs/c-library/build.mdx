@@ -8,6 +8,9 @@ description: 把 libagent_desktop_ffi 接到你自己的工程上，以及为什
 
 ## 构建
 
+需要 Rust 1.89 或更新版本，外加平台工具链：macOS 13+ 上的 Xcode 命令行工具、
+Windows 上的 MSVC 构建工具，或 Linux 上的 C 链接器。
+
 core 永远不 import 平台 crate，平台 crate 之间也互不 import。把 cargo 的范围限制在
 宿主平台对应的包上，在 macOS 上：
 

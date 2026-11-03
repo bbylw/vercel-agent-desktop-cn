@@ -39,10 +39,12 @@ export function initSearch(config: SearchConfig): SearchInstance {
     options.forEach((option, index) => {
       if (index === activeIndex) {
         option.setAttribute("data-highlighted", "");
+        option.setAttribute("aria-selected", "true");
         option.scrollIntoView({ block: "nearest" });
         input.setAttribute("aria-activedescendant", option.id);
       } else {
         option.removeAttribute("data-highlighted");
+        option.setAttribute("aria-selected", "false");
       }
     });
     if (activeIndex < 0) input.removeAttribute("aria-activedescendant");
@@ -55,23 +57,34 @@ export function initSearch(config: SearchConfig): SearchInstance {
     input.removeAttribute("aria-activedescendant");
   }
 
-  function resultLink(title: string, href: string, className: string): HTMLAnchorElement {
-    const link = document.createElement("a");
-    link.href = href;
-    link.className = className;
-    link.textContent = title;
-    link.addEventListener("click", () => onNavigate?.());
-    return link;
-  }
-
-  function buildResult(result: SearchResult): HTMLElement {
-    const option = document.createElement("div");
+  function resultOption(
+    title: string,
+    href: string,
+    className: string,
+    titleClass: string,
+  ): HTMLAnchorElement {
+    const option = document.createElement("a");
+    option.href = href;
     option.id = `search-result-${resultIdCounter++}`;
     option.setAttribute("role", "option");
-    option.className = "rounded-lg px-2 py-2 transition-colors cursor-pointer hover:bg-accent focus-within:bg-accent data-[highlighted]:bg-accent";
+    option.tabIndex = -1;
+    option.className = className;
+    option.addEventListener("click", () => onNavigate?.());
 
-    const link = resultLink(result.title, result.url, "block truncate text-sm font-medium text-foreground no-underline focus-visible:outline-none");
-    option.appendChild(link);
+    const titleElement = document.createElement("span");
+    titleElement.className = titleClass;
+    titleElement.textContent = title;
+    option.appendChild(titleElement);
+    return option;
+  }
+
+  function buildResult(result: SearchResult): HTMLElement[] {
+    const option = resultOption(
+      result.title,
+      result.url,
+      "mb-0.5 block rounded-lg px-2 py-2 text-foreground no-underline transition-colors cursor-pointer hover:bg-accent focus:bg-accent data-[highlighted]:bg-accent",
+      "block truncate text-sm font-medium",
+    );
 
     if (result.snippet) {
       const snippet = document.createElement("p");
@@ -80,21 +93,16 @@ export function initSearch(config: SearchConfig): SearchInstance {
       option.appendChild(snippet);
     }
 
-    if (result.subResults?.length) {
-      const subList = document.createElement("div");
-      subList.className = "mt-2 border-s border-border ps-3";
-      for (const sub of result.subResults.slice(0, 3)) {
-        subList.appendChild(resultLink(sub.title, sub.url, "block truncate py-0.5 text-xs text-muted-foreground no-underline hover:text-foreground"));
-      }
-      option.appendChild(subList);
-    }
+    const subResults = (result.subResults ?? []).slice(0, 3).map((sub) =>
+      resultOption(
+        sub.title,
+        sub.url,
+        "ms-3 mb-0.5 block truncate rounded-e-lg border-s border-border py-1 pe-2 ps-3 text-xs text-muted-foreground no-underline transition-colors cursor-pointer hover:bg-accent hover:text-foreground focus:bg-accent data-[highlighted]:bg-accent data-[highlighted]:text-foreground",
+        "block truncate",
+      ),
+    );
 
-    option.addEventListener("click", (event) => {
-      if ((event.target as Element | null)?.closest("a")) return;
-      link.click();
-    });
-
-    return option;
+    return [option, ...subResults];
   }
 
   async function ensureInitialized(): Promise<boolean> {
@@ -105,8 +113,8 @@ export function initSearch(config: SearchConfig): SearchInstance {
       return true;
     } catch {
       emptyState.textContent = import.meta.env.DEV
-        ? "Search is available after a production build."
-        : "Search could not load. Check your connection and reload the page. If it persists, ask the site owner to rebuild and deploy the search index.";
+        ? "搜索需要生产构建后才能使用。"
+        : "搜索加载失败。检查网络后刷新页面；如果仍然失败，请站点维护者重新构建并部署搜索索引。";
       return false;
     }
   }
@@ -117,7 +125,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
     const signal = activeController.signal;
 
     emptyState.style.display = "";
-    emptyState.textContent = "Searching…";
+    emptyState.textContent = "搜索中…";
     clearResults();
 
     if (!(await ensureInitialized()) || signal.aborted) return;
@@ -137,13 +145,15 @@ export function initSearch(config: SearchConfig): SearchInstance {
 
       emptyState.style.display = "none";
       input.setAttribute("aria-expanded", "true");
-      for (const result of results) resultsContainer.appendChild(buildResult(result));
+      for (const result of results) {
+        for (const option of buildResult(result)) resultsContainer.appendChild(option);
+      }
       resultsContainer.hidden = false;
     } catch {
       if (signal.aborted) return;
       clearResults();
       emptyState.style.display = "";
-      emptyState.textContent = "Search is temporarily unavailable.";
+      emptyState.textContent = "搜索暂时不可用。";
     }
   }
 
@@ -178,7 +188,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
       updateActive(options.length - 1);
     } else if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
-      options[activeIndex]?.querySelector<HTMLAnchorElement>("a")?.click();
+      options[activeIndex]?.click();
     }
   }
 

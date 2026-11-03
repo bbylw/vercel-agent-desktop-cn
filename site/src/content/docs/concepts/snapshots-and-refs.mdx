@@ -1,6 +1,6 @@
 ---
 title: 快照与 ref
-description: ref 属于产生它的那次快照。这一页讲它的构成、失效条件和正确用法。
+description: ref 属于产生它的那次快照。这一页讲它的构成、重新识别方式和失效后的动作。
 ---
 
 `snapshot` 把一棵可访问性树读成 JSON，并给其中每个代理能操作的元素分配一个 ref。
@@ -33,6 +33,24 @@ id 两段缺一不可。只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`——�
 
 `available_actions` 是选择动作的依据。对不在列表里的动作发起请求，会被平台拒绝。
 
+## ref 如何被重新识别
+
+动作执行前，agent-desktop 会从存储的条目重新识别这个 ref。从 2.6 起，Windows、Linux，
+以及 macOS 上无法取得元素地址的 ref，采用同一套证据规则：
+
+- 快照必须完整读取过它的窗口，并证明捕获时恰好有一个元素匹配它的完整谓词：
+  角色加上记录的稳定字段（native id、稳定 name、稳定 description）。
+- 解析时在当前窗口重新计数这个谓词，只接受恰好一个匹配。
+- 骨架、深度截断和 `--root` 下钻都只是同一次完整窗口观察的浅层呈现，它们的 ref 仍然按整个窗口计数。
+- 值（value）和位置（bounds）永远不参与身份判断。
+
+如果快照需要完整读取窗口才能证明 ref，但没能读完，`data.identity_unproven` 为 `true`。
+这不影响 `complete` 对当前呈现树的描述，但这批 ref 都会以 `identity_not_unique` 失败；
+用更大的 `--timeout-ms` 重拍。
+
+macOS 上带元素地址的 ref 走另一条路：地址失效，或进程、角色、标识符不再匹配时，
+直接返回 `retained_object_stale`，不执行搜索，避免落到相似元素上。
+
 ## 什么时候失效
 
 界面是活的。产生 ref 的那次快照对应的界面状态一旦被替换，ref 就不再安全。
@@ -40,8 +58,18 @@ id 两段缺一不可。只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`——�
 | 情形 | 结果 | 该怎么做 |
 |---|---|---|
 | 只写了序号，没带快照 id | `INVALID_ARGS` | 用完整的 `@snapshot:序号` |
-| 界面已经变了 | `STALE_REF` | 重新快照，改用新快照里的 ref |
-| 目标同时命中多个元素 | `AMBIGUOUS_TARGET` | 缩小范围：指定 `--window-id`，或换一次更聚焦的快照 |
+| 元素消失，或 macOS 的元素地址失效 | `STALE_REF`（`details.kind` 为 `saved_ref_absent` / `retained_object_stale`） | 重新快照，改用新快照里的 ref |
+| 捕获之后出现了完全相同的元素 | `AMBIGUOUS_TARGET`（`saved_ref_ambiguous`） | 换一个在窗口内唯一的控件；重新快照会同时拒绝两个双胞胎 |
+| 捕获时没有证明 ref 唯一，或窗口没能在超时内读完 | `AMBIGUOUS_TARGET`（`identity_not_unique`） | 换唯一控件；只是超时则用更大的 `--timeout-ms` 重拍 |
+| 用 `--app` 选目标时应用有多个窗口 | `AMBIGUOUS_TARGET`，`error.details` 列出候选窗口 id | 用 `--window-id` 指定其中一个 |
+
+最后一行的多窗口歧义是**目标选择**层面的问题，和 ref 身份歧义不是一回事。遇到
+`AMBIGUOUS_TARGET` 先读 `details.kind`，不要一律用 `--window-id`。
+
+上述 ref 身份失败都带 `details.retryable: false`，并且是 `not_delivered`。
+它们的 `disposition.retry` 仍然是 `safe`，因为什么都没发送；但重复同一个 ref 会得到同样的拒绝。
+唯一的例外是 `resolution_identity_unknown`：实时字段读不到导致身份计数未完成，它会以
+`TIMEOUT` 报告，可以重试。
 
 <Aside type="caution" title="不要缓存 ref">
   把 ref 存进变量、写进文件、或者在两轮循环里复用它，都会在下一次界面变动时炸掉。

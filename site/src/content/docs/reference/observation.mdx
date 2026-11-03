@@ -26,8 +26,16 @@ agent-desktop snapshot --app Finder --window-id w-204749 -i
 | `--window-id <id>` | 应用有多个窗口时选定其中一个 |
 
 返回的 `data` 里，`snapshot_id` 拼出所有 ref，`ref_count` 告诉你这次拿到了多少个可操作元素，
-`complete` 说明这棵树有没有读全。详见[快照与 ref](/concepts/snapshots-and-refs/)
-和[骨架与下钻](/concepts/skeleton-and-drilldown/)。
+`complete` 说明这棵树有没有读全。没读全时还会带上 `truncated`、`nodes_observed`，
+被截断的节点带 `subtree_truncated`；这些字段不影响如何判断整棵树，判断整棵树始终看 `complete`。
+详见[快照与 ref](/concepts/snapshots-and-refs/)和[骨架与下钻](/concepts/skeleton-and-drilldown/)。
+
+<Aside type="note" title="identity_unproven 不是 complete 的反面">
+  `data.identity_unproven: true` 说明这次快照需要一次完整窗口读取来证明 ref 身份，但没能完成。
+  此时呈现的树可能仍然完整；问题在于这批 ref 无法被证明唯一，动作会以
+  `AMBIGUOUS_TARGET`（`details.kind: "identity_not_unique"`）失败。
+  用更大的 `--timeout-ms` 重新快照即可。
+</Aside>
 
 ## find
 

@@ -19,8 +19,8 @@ function initConnectMcp(root: HTMLElement): () => void {
       copied = false;
     }
     if (!root.isConnected) return;
-    label.textContent = copied ? "Copied" : "Couldn't copy";
-    if (status) status.textContent = copied ? "MCP server URL copied" : "Couldn't copy the MCP server URL";
+    label.textContent = copied ? "已复制" : "复制失败";
+    if (status) status.textContent = copied ? "MCP 服务器地址已复制" : "无法复制 MCP 服务器地址";
     if (timer !== undefined) window.clearTimeout(timer);
     timer = window.setTimeout(() => {
       label.textContent = idle;
