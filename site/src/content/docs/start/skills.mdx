@@ -1,9 +1,9 @@
 ---
-title: 面向 AI 代理
-description: 二进制自带与自身版本匹配的文档，代理可以自己把它们读进来。
+title: 面向 AI 智能体
+description: 二进制自带与自身版本匹配的文档，智能体可以自己把它们读进来。
 ---
 
-agent-desktop 的可执行文件里内嵌了与它自己版本一致的指南。代理在动手之前先把它们取出来，
+agent-desktop 的可执行文件里内嵌了与它自己版本一致的指南。智能体在动手之前先把它们取出来，
 这样规则永远和你正在调用的那个二进制对齐，而不是和某份会过期的网页文档对齐。
 
 ```bash
@@ -12,7 +12,7 @@ agent-desktop skills get platform     # 你所运行平台上的差异
 agent-desktop <command> --help        # 单条命令的参数
 ```
 
-## 装进代理运行环境
+## 装进智能体运行环境
 
 从 [skills.sh](https://skills.sh/vercel-labs/agent-desktop/agent-desktop) 安装这个技能：
 
@@ -31,10 +31,10 @@ npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-deskto
 
 <Aside type="tip" title="为什么是两条">
   `desktop` 讲的是跨平台的循环规则，`platform` 讲的是你脚下这个平台的能力边界。
-  只读一条，代理会按另一个平台的假设行事。
+  只读一条，智能体会按另一个平台的假设行事。
 </Aside>
 
-## 代理要遵守的契约
+## 智能体要遵守的契约
 
 每条命令只打印一个信封，包含 `ok` 以及 `data` 或 `error`。
 
@@ -48,7 +48,7 @@ npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-deskto
 
 ## 网页版文档
 
-这个站点本身也发布了代理友好的形态，不装任何东西也能读：
+这个站点本身也发布了智能体友好的形态，不装任何东西也能读：
 
 | 资源 | 地址 |
 |---|---|

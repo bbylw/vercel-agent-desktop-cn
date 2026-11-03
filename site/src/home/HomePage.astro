@@ -159,11 +159,11 @@ const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:cir
               <span class="inline-flex size-1.5 rounded-full bg-[var(--h-ok)]" aria-hidden="true"></span>
               macOS · Windows · Linux &nbsp;/&nbsp; <b>CLI + C 库</b>
             </span>
-            <h1 class="ad-h1">让 AI 代理<br /><em>读得懂</em>桌面应用</h1>
+            <h1 class="ad-h1">让 AI 智能体<br /><em>读得懂</em>桌面应用</h1>
             <p class="ad-lede">
               agent-desktop 读取操作系统的可访问性树，把它变成带 ref 的 JSON。
-              代理对一个 ref 执行动作，再快照一次来核对——全程不做像素匹配，
-              控制循环始终留在你自己的代理里。
+              智能体对一个 ref 执行动作，再快照一次来核对——全程不做像素匹配，
+              控制循环始终留在你自己的智能体里。
             </p>
 
             <div class="ad-install">
@@ -220,8 +220,8 @@ const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:cir
 
       <div class="ad-isgrid">
         <div class="ad-is">
-          <h3><Icon name="ph:wrench" class="size-4 text-brand" />代理调用的工具</h3>
-          <p>不是代理。观察—操作—验证的循环由调用方持有，它只把界面变成可寻址的数据，再把一次动作落下去。</p>
+          <h3><Icon name="ph:wrench" class="size-4 text-brand" />智能体调用的工具</h3>
+          <p>不是智能体。观察—操作—验证的循环由调用方持有，它只把界面变成可寻址的数据，再把一次动作落下去。</p>
         </div>
         <div class="ad-is">
           <h3><span class="ad-mark ad-mark-no" aria-hidden="true"><Icon name="ph:x" class="size-3" /></span>内部没有模型</h3>
@@ -436,17 +436,17 @@ const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:cir
     </div>
   </section>
 
-  {/* ============ 面向代理 ============ */}
+  {/* ============ 面向智能体 ============ */}
   <section class="ad-section-tight" id="agents" style="border-top:1px solid var(--nb-border)">
     <div class="ad-wrap">
-      <p class="ad-kicker">代理接入</p>
+      <p class="ad-kicker">智能体接入</p>
       <h2 class="ad-h2">文档随二进制一起发布</h2>
-      <p class="ad-sub">代理在动手之前先读它自己那个版本的规则，这样依据永远和正在调用的二进制对齐，而不是和某份会过期的网页文档对齐。</p>
+      <p class="ad-sub">智能体在动手之前先读它自己那个版本的规则，这样依据永远和正在调用的二进制对齐，而不是和某份会过期的网页文档对齐。</p>
 
       <div class="ad-agent">
         <div>
-          <h3>让代理自己取规则</h3>
-          <p>两条命令，一条讲跨平台的循环规则，一条讲你脚下这个平台的能力边界。只读一条，代理会按另一个平台的假设行事。</p>
+          <h3>让智能体自己取规则</h3>
+          <p>两条命令，一条讲跨平台的循环规则，一条讲你脚下这个平台的能力边界。只读一条，智能体会按另一个平台的假设行事。</p>
           <Code code={skillsCmd} lang="bash" />
         </div>
         <div>
@@ -512,7 +512,7 @@ const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:cir
             <li><a href="/start/">产品概览</a></li>
             <li><a href="/start/install/">安装与权限</a></li>
             <li><a href="/start/quickstart/">快速开始</a></li>
-            <li><a href="/start/skills/">面向 AI 代理</a></li>
+            <li><a href="/start/skills/">面向 AI 智能体</a></li>
           </ul>
         </div>
         <div>

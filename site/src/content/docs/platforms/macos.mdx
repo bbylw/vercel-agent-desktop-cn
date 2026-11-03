@@ -4,7 +4,7 @@ description: AX API、辅助功能权限，以及权限缺失时你会看到什�
 ---
 
 macOS 上 agent-desktop 走系统的 AX API。前提是「辅助功能」权限：授予运行 agent-desktop 的
-那个应用（Terminal、iTerm2、Warp、VS Code 或代理宿主），不是二进制文件本身。
+那个应用（Terminal、iTerm2、Warp、VS Code 或智能体宿主），不是二进制文件本身。
 
 ## 系统要求
 
@@ -23,7 +23,7 @@ agent-desktop permissions --guide   # 打开系统设置并给出引导面板
 勾进「辅助功能」；截屏需要「屏幕录制」；打开通知中心需要允许该应用控制 System Events。
 
 <Aside type="caution" title="授权对象是启动方，不是二进制">
-  权限挂在发起调用的那个应用上。换一个终端、换一种启动方式（比如从代理宿主而不是 Terminal.app
+  权限挂在发起调用的那个应用上。换一个终端、换一种启动方式（比如从智能体宿主而不是 Terminal.app
   里调用），就要重新授予一次。macOS 27 起，「辅助功能」列表改名为 Device Control and Data Access。
 </Aside>
 

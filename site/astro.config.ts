@@ -13,7 +13,7 @@ const nimbusConfig = defineNimbusConfig({
   site,
   title: "agent-desktop",
   description:
-    "面向 AI 代理的电脑操作：读取操作系统可访问性树，把它变成带 ref 的 JSON，再对 ref 执行动作。macOS、Windows、Linux 通用。",
+    "面向 AI 智能体的电脑操作：读取操作系统可访问性树，把它变成带 ref 的 JSON，再对 ref 执行动作。macOS、Windows、Linux 通用。",
   locale: "zh-CN",
   github: "https://github.com/vercel-labs/agent-desktop",
   socialImageAlt: "agent-desktop 文档预览",

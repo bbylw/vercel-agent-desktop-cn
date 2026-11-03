@@ -1,6 +1,6 @@
 # agent-desktop
 
-面向 AI 代理的电脑操作：通过操作系统可访问性树读取并操控桌面应用。
+面向 AI 智能体的电脑操作：通过操作系统可访问性树读取并操控桌面应用。
 
 <p>
   <a href="https://vercel.com/labs#labs-products"><img alt="Vercel Labs Product" src="https://img.shields.io/badge/LABS-PRODUCT-0a0a0a.svg?style=for-the-badge&amp;logo=Vercel&amp;labelColor=000000" height="28"></a>
@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/agent-desktop"><img alt="npm downloads per month: agent-desktop" src="https://img.shields.io/npm/dm/agent-desktop.svg?style=for-the-badge&amp;labelColor=000000&amp;label=npm%20downloads" height="28"></a>
 </p>
 
-一个用于 macOS、Windows 和 Linux 的 CLI 与 C 库。快照（snapshot）返回 JSON，为代理能够操作的每一个元素附带一个 ref。代理对一个 ref 执行操作，然后再快照一次来核对，全程不做像素匹配；控制循环始终留在你自己的代理里。
+一个用于 macOS、Windows 和 Linux 的 CLI 与 C 库。快照（snapshot）返回 JSON，为智能体能够操作的每一个元素附带一个 ref。智能体对一个 ref 执行操作，然后再快照一次来核对，全程不做像素匹配；控制循环始终留在你自己的智能体里。
 
 每次 CLI 调用都在独立进程中运行。无头（headless）调用依然禁止激活前台窗口和合成输入。
 
@@ -80,7 +80,7 @@ agent-desktop snapshot --app Finder -i      # 再次观察以验证
   全局 `--headed` 标志才允许物理输入。
 - **PowerShell。** 每个 ref 都要加引号（`'@s8f3k2p9:e8'`），因为不加引号的 `@token` 是散裂（splatting）运算符。
 
-## 面向 AI 代理
+## 面向 AI 智能体
 
 二进制自带与自身版本匹配的文档：
 
@@ -90,7 +90,7 @@ agent-desktop skills get platform     # 你所运行平台上的差异
 agent-desktop <command> --help        # 单条命令的参数
 ```
 
-从 [skills.sh](https://skills.sh/vercel-labs/agent-desktop/agent-desktop) 把该技能装进你的代理运行环境：
+从 [skills.sh](https://skills.sh/vercel-labs/agent-desktop/agent-desktop) 把该技能装进你的智能体运行环境：
 
 ```bash
 npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-desktop
@@ -171,7 +171,7 @@ cargo clippy "${HOST_PKGS[@]}" --all-targets -- -D warnings
 |---|---|
 | 解决安装问题、授予权限、校验下载或从源码构建 | [docs/install.md](https://github.com/vercel-labs/agent-desktop/blob/main/docs/install.md) |
 | 解析 JSON 信封、错误码和退出码 | [docs/json-output.md](https://github.com/vercel-labs/agent-desktop/blob/main/docs/json-output.md) |
-| 作为 AI 代理来驱动这个工具 | `agent-desktop skills get desktop`（[skills/agent-desktop/](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop)） |
+| 作为 AI 智能体来驱动这个工具 | `agent-desktop skills get desktop`（[skills/agent-desktop/](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop)） |
 | 了解某一个平台上的差异 | [macOS](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop-macos)、[Windows](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop-windows)、[Linux](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop-linux) |
 | 调用 C 库 | [skills/agent-desktop-ffi/](https://github.com/vercel-labs/agent-desktop/tree/main/skills/agent-desktop-ffi) |
 | 查术语：ref、快照、会话 | [CONCEPTS.md](https://github.com/vercel-labs/agent-desktop/blob/main/CONCEPTS.md) |

@@ -1,26 +1,26 @@
 ---
 title: 产品概览
-description: agent-desktop 让 AI 代理读取桌面应用的可访问性树、操控其中的元素，并自己核对结果。
+description: agent-desktop 让 AI 智能体读取桌面应用的可访问性树、操控其中的元素，并自己核对结果。
 sidebar:
   order: 0
 ---
 
-agent-desktop 是一个面向 macOS、Windows 和 Linux 的 CLI 与 C 库。它读取操作系统提供的可访问性树，把界面里代理能够操作的每一个元素变成一个带 `ref` 的 JSON 节点。代理对某个 `ref` 执行一次操作，然后再快照一次来确认结果，全程不做像素匹配，控制循环始终留在你自己的代理里。
+agent-desktop 是一个面向 macOS、Windows 和 Linux 的 CLI 与 C 库。它读取操作系统提供的可访问性树，把界面里智能体能够操作的每一个元素变成一个带 `ref` 的 JSON 节点。智能体对某个 `ref` 执行一次操作，然后再快照一次来确认结果，全程不做像素匹配，控制循环始终留在你自己的智能体里。
 
 ```bash
 npm install -g agent-desktop
 agent-desktop status          # 平台、权限、支持的界面
-agent-desktop skills get desktop   # 代理应该先读的指南
+agent-desktop skills get desktop   # 智能体应该先读的指南
 ```
 
 ## 它是什么，不是什么
 
 <Aside type="note" title="一条边界">
-  agent-desktop 是一件工具，不是一个代理。它内部没有模型，没有图形界面，也没有交互式提示。
+  agent-desktop 是一件工具，不是一个智能体。它内部没有模型，没有图形界面，也没有交互式提示。
 </Aside>
 
 <CardGrid>
-  <Card title="代理调用的工具" icon="ph:wrench">
+  <Card title="智能体调用的工具" icon="ph:wrench">
     观察—操作—验证的循环由调用方（你的代码或 LLM 循环）持有。它只负责把界面变成可寻址的数据，再把一次动作落下去。
   </Card>
   <Card title="内部没有模型" icon="ph:prohibit">
@@ -36,7 +36,7 @@ agent-desktop skills get desktop   # 代理应该先读的指南
 
 ## 四步循环
 
-代理先把应用摸清，再钻进需要的那块区域，对一个 `ref` 执行动作，最后把结果读一遍。
+智能体先把应用摸清，再钻进需要的那块区域，对一个 `ref` 执行动作，最后把结果读一遍。
 
 ```bash
 agent-desktop snapshot --app gnome-calculator --skeleton -i --compact   # 1. 摸清整体骨架
@@ -87,8 +87,8 @@ CLI 在每个平台上都是同一套 60 个命令名。运行在你这个平台
   <Card title="快速开始" icon="ph:lightning" href="/start/quickstart/">
     对着一个真实应用跑完一整轮观察—操作—验证。
   </Card>
-  <Card title="面向 AI 代理" icon="ph:robot" href="/start/skills/">
-    把技能装进代理运行环境，或者写进 `AGENTS.md`。
+  <Card title="面向 AI 智能体" icon="ph:robot" href="/start/skills/">
+    把技能装进智能体运行环境，或者写进 `AGENTS.md`。
   </Card>
   <Card title="命令参考" icon="ph:terminal-window" href="/reference/">
     全部 60 个命令名，按分组列出。

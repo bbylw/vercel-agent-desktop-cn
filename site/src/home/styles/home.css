@@ -515,7 +515,7 @@
   text-decoration-color: var(--nb-danger);
 }
 
-/* ---------- 代理区块 ---------- */
+/* ---------- 智能体区块 ---------- */
 .ad-agent {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

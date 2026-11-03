@@ -69,7 +69,7 @@ gh attestation verify <downloaded-archive> --repo vercel-labs/agent-desktop
 <Tabs>
   <TabItem label="macOS">
     需要「辅助功能」权限；截图额外需要「屏幕录制」，打开通知中心需要 System Events 的
-    「自动化」权限。权限授予*运行 agent-desktop 的终端或代理宿主进程*，不是二进制本身。
+    「自动化」权限。权限授予*运行 agent-desktop 的终端或智能体宿主进程*，不是二进制本身。
 
     ```bash
     agent-desktop permissions          # 只报告状态，不弹窗
@@ -79,7 +79,7 @@ gh attestation verify <downloaded-archive> --repo vercel-labs/agent-desktop
   </TabItem>
   <TabItem label="Windows">
     和终端同级完整性（integrity level）的应用无需额外授权。以管理员身份运行的应用可以读，
-    但只有同样提权的代理才能向它发送输入。
+    但只有同样提权的智能体才能向它发送输入。
     ```bash
     agent-desktop permissions
     ```
