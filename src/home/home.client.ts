@@ -11,18 +11,26 @@ function initCopy(): void {
       const src = btn.closest(".ad-install")?.querySelector("[data-ad-copy-src]");
       const text = src?.textContent?.trim();
       if (!text) return;
-      const label = btn.lastChild;
+      // The label is its own element (and an aria-live region), so the button
+      // can grow another icon without silently breaking the feedback.
+      const label = btn.querySelector<HTMLElement>("[data-ad-copy-label]");
+      const setLabel = (value: string) => {
+        if (label) label.textContent = value;
+      };
+      window.clearTimeout(Number(btn.dataset.adCopyTimer));
       try {
         await navigator.clipboard.writeText(text);
         btn.dataset.state = "ok";
-        if (label?.nodeType === Node.TEXT_NODE) label.textContent = "已复制";
+        setLabel("已复制");
       } catch {
-        if (label?.nodeType === Node.TEXT_NODE) label.textContent = "复制失败";
+        setLabel("复制失败");
       }
-      window.setTimeout(() => {
-        delete btn.dataset.state;
-        if (label?.nodeType === Node.TEXT_NODE) label.textContent = "复制";
-      }, 1600);
+      btn.dataset.adCopyTimer = String(
+        window.setTimeout(() => {
+          delete btn.dataset.state;
+          setLabel("复制");
+        }, 1600),
+      );
     });
   });
 }

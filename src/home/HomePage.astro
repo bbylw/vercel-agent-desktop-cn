@@ -135,7 +135,7 @@ const termLines = [
 const termHtml = termLines.join("\n");
 ---
 
-<main id="main-content">
+<main id="main-content" tabindex="-1">
   {/* ============ hero ============ */}
   <section class="ad-hero" id="top">
     <div class="ad-hero-inner">
@@ -157,7 +157,7 @@ const termHtml = termLines.join("\n");
               <span class="p">$</span>
               <span class="c" data-ad-copy-src>npm install -g agent-desktop</span>
               <button type="button" data-ad-copy aria-label="复制安装命令">
-                <Icon name="ph:copy" class="size-3.5" />复制
+                <Icon name="ph:copy" class="size-3.5" /><span data-ad-copy-label aria-live="polite">复制</span>
               </button>
             </div>
 
@@ -473,7 +473,7 @@ const termHtml = termLines.join("\n");
     <div class="ad-wrap">
       <div class="ad-foot-cols">
         <div>
-          <h4>开始</h4>
+          <h3>开始</h3>
           <ul>
             <li><a href="/start/">产品概览</a></li>
             <li><a href="/start/install/">安装与权限</a></li>
@@ -482,7 +482,7 @@ const termHtml = termLines.join("\n");
           </ul>
         </div>
         <div>
-          <h4>概念</h4>
+          <h3>概念</h3>
           <ul>
             <li><a href="/concepts/snapshots-and-refs/">快照与 ref</a></li>
             <li><a href="/concepts/skeleton-and-drilldown/">骨架与下钻</a></li>
@@ -491,7 +491,7 @@ const termHtml = termLines.join("\n");
           </ul>
         </div>
         <div>
-          <h4>参考</h4>
+          <h3>参考</h3>
           <ul>
             <li><a href="/reference/">全部命令</a></li>
             <li><a href="/output/">JSON 输出契约</a></li>
@@ -500,7 +500,7 @@ const termHtml = termLines.join("\n");
           </ul>
         </div>
         <div>
-          <h4>项目</h4>
+          <h3>项目</h3>
           <ul>
             <li><a href="https://github.com/vercel-labs/agent-desktop/releases" target="_blank" rel="noopener">发行版</a></li>
             <li><a href="https://github.com/vercel-labs/agent-desktop/blob/main/LICENSE" target="_blank" rel="noopener">Apache-2.0 许可</a></li>
