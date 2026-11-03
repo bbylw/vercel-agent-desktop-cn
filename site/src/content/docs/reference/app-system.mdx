@@ -1,0 +1,76 @@
+---
+title: 应用、窗口与系统
+description: launch 到 batch——管理目标应用、控制窗口，以及查询状态与权限。
+---
+
+这一组命令决定动作发生在哪个应用、哪个窗口上，也负责把环境本身的状态报给你。
+
+## 应用与窗口
+
+| 命令 | 作用 |
+|---|---|
+| `launch` | 启动一个应用 |
+| `close-app` | 关闭应用 |
+| `list-apps` | 列出在运行的应用，名字可直接喂给 `--app` |
+| `list-windows` | 列出窗口及其 id |
+| `list-displays` | 列出显示器 |
+| `focus-window` | 聚焦某个窗口 |
+| `resize-window` | 调整窗口尺寸 |
+| `move-window` | 移动窗口 |
+| `minimize` / `maximize` / `restore` | 最小化 / 最大化 / 还原 |
+| `open-system-surface` | 打开外壳界面（Dock、菜单栏附加项、托盘、操作中心） |
+
+`snapshot` 和动作类命令用 `--app` 与 `--window-id` 选目标。一个应用有多个窗口时，
+操作会返回 `AMBIGUOUS_TARGET`，候选窗口 id 放在 `error.details` 里，见
+[错误与恢复](/output/errors/)。
+
+## 剪贴板
+
+```bash
+agent-desktop clipboard-get
+agent-desktop clipboard-set
+agent-desktop clipboard-clear
+```
+
+<Aside type="caution" title="剪贴板是隐私高危区">
+  剪贴板里可能有密码、令牌、私钥或任何用户刚复制过的内容。读到它之后，
+  不要写进日志、不要上传、不要发往模型服务商。见[隐私与数据处理](/privacy/)。
+</Aside>
+
+## 通知
+
+```bash
+agent-desktop list-notifications
+agent-desktop dismiss-notification
+agent-desktop dismiss-all-notifications
+agent-desktop notification-action
+```
+
+Linux 上的通知读取依赖 GNOME Shell，见 [Linux 平台说明](/platforms/linux/)。
+
+## 等待
+
+```bash
+agent-desktop wait --element @s8f3k2p9:e6 --predicate value --value 7
+```
+
+`wait` 让代理可以挂起直到某个条件成立，比循环快照更省上下文，也不会漏掉中间状态。
+参数以 `agent-desktop wait --help` 为准。
+
+## 系统
+
+| 命令 | 作用 |
+|---|---|
+| `status` | 平台、权限状态、支持的界面 |
+| `permissions` | 检查权限；`--guide` 把授权路径指给你 |
+| `version` | 二进制版本 |
+| `batch` | 一次调用提交多条命令 |
+| `skills` | 取出内嵌文档：`skills get desktop`、`skills get platform`、`skills get ffi` |
+
+## batch 用在什么时候
+
+`batch` 省掉逐条起进程的开销，适合已经确定好的动作序列。探索阶段不要用它——
+每一步都需要读上一步的结果才能决定下一步，批量会把这条反馈链剪断。
+
+每次 CLI 调用都在独立进程中运行，`batch` 不改变这一点：它把多条命令放在同一个进程里
+按顺序执行，仍然逐条产出结果。

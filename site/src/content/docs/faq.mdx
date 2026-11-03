@@ -1,0 +1,103 @@
+---
+title: 常见问题
+description: 从现象回到原因：读不到树、ref 报错、权限、平台差异和构建失败。
+---
+
+## 快照回来是一棵空树
+
+九成是权限或总线，不是命令写错了。按顺序确认：
+
+```bash
+agent-desktop status
+agent-desktop permissions
+agent-desktop list-apps
+```
+
+- **macOS**：辅助功能权限要授予*运行 agent-desktop 的那个终端*，见 [macOS](/platforms/macos/)。
+- **Windows**：目标是管理员进程时，终端也必须以管理员身份运行，见 [Windows](/platforms/windows/)。
+- **Linux**：需要用户自己的图形会话和一条工作中的 AT-SPI 总线，`at-spi2-core` 要装上，
+  见 [Linux](/platforms/linux/)。
+
+剩下的那一成是这个应用确实没有发布可访问性树。它读声明，不猜像素，
+所以不暴露树的界面它就看不见。
+
+## `INVALID_ARGS`
+
+你写的 ref 缺了快照 id。完整形式是 `@<snapshot_id>:<序号>`，例如 `@s8f3k2p9:e8`。
+只写 `@e8` 会被拒绝，规则见[快照与 ref](/concepts/snapshots-and-refs/)。
+
+PowerShell 用户还会碰到另一种 `INVALID_ARGS`：不加引号的 `@token` 被当成散裂运算符，
+命令在到达 agent-desktop 之前就被改形了。写成 `'@s8f3k2p9:e8'`。
+
+## `STALE_REF`
+
+界面已经变了。正确处置是重新快照并使用新快照里的 ref，而不是重试同一个动作。
+
+## `AMBIGUOUS_TARGET`
+
+目标同时命中多个对象，最常见的是应用开了多个窗口。候选窗口 id 在 `error.details` 里，
+用 `--window-id` 指定其中一个：
+
+```bash
+agent-desktop snapshot --app Finder --window-id w-204749 -i
+```
+
+## 什么时候可以重试
+
+只看一个字段：`error.disposition.retry`。
+
+<Aside type="caution" title="只有 safe 才重试">
+  一次动作报错不代表它没有生效。重试一个已经落下的动作会把它做两遍。
+  `retry` 不是 `safe` 时，先重新观察界面，再决定下一步。
+</Aside>
+
+## 快照太大，把上下文挤爆了
+
+先用 `--skeleton -i --compact` 读整体结构，再用 `--root <ref> -i --compact` 深入其中一块。
+见[骨架与下钻](/concepts/skeleton-and-drilldown/)。
+
+## 界面上那个按钮明明存在，却读不到
+
+可能的原因：
+
+- 那个元素不是可交互的，被 `-i` 过滤掉了。去掉 `-i` 再读一次。
+- 树还没读完：`complete` 为 `false`。先 `wait`，再重新快照。
+- 它属于另一个窗口。用 `list-windows` 找到正确的 `--window-id`。
+- 它由外壳绘制而不是应用。用 `open-system-surface` 和 `list-surfaces`，
+  见[界面](/concepts/surfaces/)。
+
+## 我想确认某个动作真的生效了
+
+不要依赖返回值。用一次读取收尾：
+
+```bash
+agent-desktop wait --element @s8f3k2p9:e6 --predicate value --value 7
+agent-desktop get @s8f3k2p9:e6       # 只读一个属性
+agent-desktop is @s8f3k2p9:e6        # 只判断一个状态
+```
+
+## `key-down` 之类的命令拒绝运行
+
+这是设计如此。`key-down`、`key-up`、`mouse-down`、`mouse-up` 在有守护进程能够可靠释放
+被按住的按键或鼠标键之前一律拒绝运行，因为一个卡住的按键会污染之后所有操作。
+按住再拖动用 `drag`，组合键用 `press`。见[键盘、鼠标与物理输入](/reference/input/)。
+
+## 从源码构建失败
+
+每个平台的适配器只能在它自己的操作系统上构建。确认你只把宿主平台对应的包传给了 cargo：
+
+```bash
+HOST_PKGS=(-p agent-desktop-core -p agent-desktop-macos -p agent-desktop -p agent-desktop-ffi)
+cargo test "${HOST_PKGS[@]}"
+cargo clippy "${HOST_PKGS[@]}" --all-targets -- -D warnings
+```
+
+所有关卡列在仓库的 `CONTRIBUTING.md`。跨平台调用见[构建与链接](/c-library/build/)。
+
+## 还有别的问题
+
+仓库里的 `docs/faq.md` 收录了更多问答，`docs/solutions/` 记录了过去遇到的缺陷和经验。
+报告安全漏洞请走 `SECURITY.md`，不要开公开 issue。
+
+- [隐私与数据处理](/privacy/)
+- [错误与恢复](/output/errors/)

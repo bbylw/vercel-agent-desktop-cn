@@ -1,0 +1,82 @@
+---
+title: JSON 输出契约
+description: 每条命令打印一个信封，包含 ok 以及 data 或 error。这一页是它的结构定义。
+---
+
+agent-desktop 的每条命令只打印一个 JSON 信封，然后退出。没有分隔日志、没有进度条、
+没有需要正则去掉的前缀——一次调用对应一个可以 `JSON.parse` 的对象。
+
+## 成功
+
+```json
+{
+  "version": "2.6",
+  "ok": true,
+  "command": "snapshot",
+  "data": {
+    "app": "Finder",
+    "window": { "id": "w-204749", "title": "Downloads" },
+    "snapshot_id": "s8f3k2p9",
+    "ref_count": 59,
+    "complete": true
+  }
+}
+```
+
+| 字段 | 含义 |
+|---|---|
+| `version` | 信封格式的版本，不是二进制的版本。解析逻辑应该跟着它走。 |
+| `ok` | 这次调用是否成功。**判断成败看它，不要看输出里有没有 `error` 字样。** |
+| `command` | 被执行的命令名。 |
+| `data` | 这条命令自己的载荷，结构由命令决定。 |
+
+## 失败
+
+```json
+{
+  "version": "2.6",
+  "ok": false,
+  "command": "click",
+  "error": {
+    "code": "STALE_REF",
+    "message": "快照 s8f3k2p9 已被更新的界面取代",
+    "disposition": { "retry": "unsafe" },
+    "suggestion": "重新运行 snapshot，并使用新快照里的 ref",
+    "details": { "snapshot_id": "s8f3k2p9" }
+  }
+}
+```
+
+| 字段 | 含义 |
+|---|---|
+| `code` | 机器可读的错误码，见[错误与恢复](/output/errors/)。 |
+| `message` | 给人读的一句话。不要拿它做分支判断。 |
+| `disposition` | 这次失败的处置方式，其中 `retry` 是最关键的一项。 |
+| `suggestion` | 通常存在的下一步建议。代理可以直接照它行动。 |
+| `details` | 可选。`AMBIGUOUS_TARGET` 在这里列出候选窗口 id。 |
+
+<Aside type="caution" title="只有 retry 为 safe 时才重试">
+  重试一个已经落下去的动作会把它做两遍。`disposition.retry` 就是用来告诉你这一点的：
+  只有取值为 `safe` 时重试才是正确的处置。
+</Aside>
+
+## 退出码
+
+退出码用于让 shell 脚本粗筛，细判断仍然要读信封。它和 `ok` 不是一回事：
+一条命令可以正常退出并在 `ok: false` 里报告一个业务层面的失败。
+
+完整对照表在仓库的 `docs/json-output.md`，也可以让代理自己读：
+
+```bash
+agent-desktop skills get desktop
+```
+
+## 解析建议
+
+- 一次调用读一个对象，不要按行切日志。
+- 判断成败只看 `ok`；需要人类可读原因时看 `error.message`。
+- 需要程序分支时看 `error.code`，需要决定要不要重试时看 `error.disposition.retry`。
+- 快照相关字段（`complete`、`ref_count`）在读完之后立刻决定是否要下钻。
+
+- [错误与恢复](/output/errors/)：错误码逐个说明。
+- [快照与 ref](/concepts/snapshots-and-refs/)：`snapshot_id` 与 ref 的关系。

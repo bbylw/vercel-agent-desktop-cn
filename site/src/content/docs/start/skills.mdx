@@ -1,0 +1,64 @@
+---
+title: 面向 AI 代理
+description: 二进制自带与自身版本匹配的文档，代理可以自己把它们读进来。
+---
+
+agent-desktop 的可执行文件里内嵌了与它自己版本一致的指南。代理在动手之前先把它们取出来，
+这样规则永远和你正在调用的那个二进制对齐，而不是和某份会过期的网页文档对齐。
+
+```bash
+agent-desktop skills get desktop      # 循环、ref、验证与重试规则
+agent-desktop skills get platform     # 你所运行平台上的差异
+agent-desktop <command> --help        # 单条命令的参数
+```
+
+## 装进代理运行环境
+
+从 [skills.sh](https://skills.sh/vercel-labs/agent-desktop/agent-desktop) 安装这个技能：
+
+```bash
+npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-desktop
+```
+
+## 写进 AGENTS.md
+
+不想装技能，就把下面这段直接放进你的 `AGENTS.md`：
+
+```markdown
+使用 `agent-desktop` 来查看并操作桌面应用。首次使用前先运行
+`agent-desktop skills get desktop` 和 `agent-desktop skills get platform`，并按其中的说明执行。
+```
+
+<Aside type="tip" title="为什么是两条">
+  `desktop` 讲的是跨平台的循环规则，`platform` 讲的是你脚下这个平台的能力边界。
+  只读一条，代理会按另一个平台的假设行事。
+</Aside>
+
+## 代理要遵守的契约
+
+每条命令只打印一个信封，包含 `ok` 以及 `data` 或 `error`。
+
+- 错误带有 `code`、`disposition`，通常还有 `suggestion`。
+- **只有当 `error.disposition.retry` 为 `safe` 时才重试。** 其他取值意味着重试会让情况更糟。
+- 退出码与命令是否成功是两件事，解析输出请以 `ok` 为准。
+
+完整的信封结构、错误码与退出码见 [JSON 输出契约](/output/) 和
+[错误与恢复](/output/errors/)。
+
+## 网页版文档
+
+这个站点本身也发布了代理友好的形态，不装任何东西也能读：
+
+| 资源 | 地址 |
+|---|---|
+| 全站索引 | `/llms.txt` |
+| 全文合并 | `/llms-full.txt` |
+| 任意页面的 Markdown | 页面地址后接 `index.md`，例如 `/start/quickstart/index.md` |
+
+每篇文档页面右上角都有「复制本页」和「Markdown 版本」两个入口。
+
+## JEV 助手
+
+可选的 [JEV 助手](https://github.com/vercel-labs/agent-desktop/blob/main/skills/jev-desktop/SKILL.md)
+会把屏幕描述发送给你配置的模型服务商。它与原生 CLI 彼此独立：不用它，agent-desktop 依然完整可用；
+用它，请把它当成一条会把桌面内容发出去的数据通道来看待，见[隐私与数据处理](/privacy/)。

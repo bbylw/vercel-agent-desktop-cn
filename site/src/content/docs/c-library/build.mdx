@@ -1,0 +1,62 @@
+---
+title: 构建与链接
+description: 把 libagent_desktop_ffi 接到你自己的工程上，以及为什么不能跨平台构建适配器。
+---
+
+每个平台的适配器只能在它自己的操作系统上构建。这不是限制，而是必然：适配器 import 的
+是这个操作系统的可访问性 API，换一台机器就找不到那些符号。
+
+## 构建
+
+core 永远不 import 平台 crate，平台 crate 之间也互不 import。把 cargo 的范围限制在
+宿主平台对应的包上，在 macOS 上：
+
+```bash
+HOST_PKGS=(-p agent-desktop-core -p agent-desktop-macos -p agent-desktop -p agent-desktop-ffi)
+cargo build --release "${HOST_PKGS[@]}"
+cargo test "${HOST_PKGS[@]}"
+cargo clippy "${HOST_PKGS[@]}" --all-targets -- -D warnings
+```
+
+在 Windows 上把列表里的 `agent-desktop-macos` 换成 `agent-desktop-windows`；
+在 Linux 上换成 `agent-desktop-linux`。
+
+`agent-desktop-ffi` 产出对应平台的动态库和头文件。
+
+| 平台 | 产物 |
+|---|---|
+| macOS | `libagent_desktop_ffi.dylib` |
+| Linux | `libagent_desktop_ffi.so` |
+| Windows | `agent_desktop_ffi.dll`（附导入库） |
+
+## 链接
+
+一个二进制在编译期就选定它要驱动哪个操作系统，所以链接时只能带一个平台适配器。
+把可执行文件和平台辅助程序放在同一个目录——CLI 走的是同样的规则，
+见[安装与权限](/start/install/)。
+
+## ABI 版本
+
+`ad_init` 接收 `AD_ABI_VERSION_MAJOR`，只有与库匹配时才返回 `AD_RESULT_OK`。
+把头文件里的常量和链接的库一起校验，而不是假设它们来自同一次发布：
+
+```c
+#include "agent_desktop.h"
+
+if (ad_init(AD_ABI_VERSION_MAJOR) != AD_RESULT_OK) {
+    /* 头文件和库不是同一次发布，停下来而不是继续调用。 */
+}
+```
+
+<Aside type="note" title="仓库不再维护自定义分发渠道">
+  官方 Homebrew 与 Scoop 软件包正在提交审核，仓库也不维护自定义的 Homebrew tap
+  或 Scoop bucket。需要预编译产物时，用 GitHub Releases 里的平台压缩包。
+</Aside>
+
+## 所有关卡
+
+`CONTRIBUTING.md` 列出了从源码构建需要通过的全部关卡。从源码构建 CLI 本身的步骤在
+仓库的 `docs/install.md#from-source`。
+
+- [C 库总览](/c-library/)：入口点、内存所有权和线程规则。
+- [常见问题](/faq/)：构建失败时的排查顺序。

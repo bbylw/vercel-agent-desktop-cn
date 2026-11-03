@@ -1,0 +1,62 @@
+---
+title: Windows
+description: UI Automation、完整性级别，以及为什么有些应用的树读不到。
+---
+
+Windows 上 agent-desktop 走 UI Automation。它的好处是没有额外的授权步骤——
+代价是一条完整性规则决定了它能不能看见某个应用。
+
+## 系统要求
+
+Windows 10 1809 或更高，或 Windows Server 2019 或更高，x64 或 ARM64，
+运行在已登录用户的交互式桌面上。
+
+## 完整性级别
+
+对你终端同级完整性（integrity level）的应用无需额外授权。
+
+<Aside type="caution" title="要操作管理员进程，终端也必须是管理员">
+  以管理员身份运行的应用处在更高的完整性级别。低完整性的终端读不到它的可访问性树。
+  需要操作这类应用时，用管理员身份启动终端。
+</Aside>
+
+读不到时的表现通常是树为空或元素缺失，而不是一个明确的权限错误，
+所以先跑 `agent-desktop status` 确认环境。
+
+## 桌面
+
+必须在已登录用户的交互式桌面上。会话被锁定、或者进程跑在非交互的窗口站里，
+界面本身就不存在，可访问性树自然读不到。
+
+## 能力表
+
+| 能力 | 状态 |
+|---|---|
+| 可访问性树 | 支持（UI Automation） |
+| 点击 / 输入 / 键盘 | 支持 |
+| 鼠标输入 | 支持 |
+| 截图 | 支持 |
+| 剪贴板 | 支持 |
+| 应用与窗口管理 | 支持 |
+| 通知 | 支持 |
+| 外壳界面 | 支持 |
+
+`launch` 的行为和界面相关的细节在仓库的 `docs/install.md#platform-notes` 里，
+也可以直接读本机的能力表：
+
+```bash
+agent-desktop skills get platform
+```
+
+## PowerShell
+
+每个 ref 都要加引号。不加引号的 `@token` 在 PowerShell 里是散裂（splatting）运算符，
+命令会被静默改形：
+
+```powershell
+agent-desktop click '@s8f3k2p9:e8'
+agent-desktop snapshot --app Explorer -i
+```
+
+- [安装与权限](/start/install/)
+- [平台支持总览](/platforms/)

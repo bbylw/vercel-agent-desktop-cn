@@ -1,0 +1,54 @@
+---
+title: 骨架与下钻
+description: 面对密集界面，先读整体结构，再挑一块深入，而不是一次把整棵树塞进上下文。
+---
+
+聊天工具、IDE、电子表格这类应用一次全量快照能产出成千上万个节点。代理的上下文窗口装不下，
+装下了也读不准。两种模式配合使用，能把一次探索的成本压到几十行。
+
+## 第一步：读骨架
+
+`--skeleton` 只保留结构，不带细节；`--compact` 去掉缩进和冗余字段。
+
+```bash
+agent-desktop snapshot --skeleton --app Slack -i --compact
+```
+
+产出的是一棵浅树：能看到有几个侧栏区块、哪个是消息列表、输入框大致在哪一片。
+这一层的目的是决定「下一步钻哪里」，而不是马上动作。
+
+## 第二步：下钻
+
+从骨架里挑一个节点的 ref，把它当作新的根再快照一次。
+
+```bash
+agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact
+```
+
+这一次读到的才是足够细的、可以用来动作的那一层。
+
+<Aside type="tip" title="成本模型">
+  下钻的 ref 依然属于骨架那次快照。用它在骨架里导航是合法的；
+  想对它执行动作，就在包含它的那次快照里确认 `available_actions`。
+</Aside>
+
+## 组合约束
+
+| flag | 作用 |
+|---|---|
+| `--skeleton` | 只要结构，用于摸清整体 |
+| `--root <ref>` | 以某个 ref 为根重新快照，用于深入局部 |
+| `-i` / `--interactive` | 只保留可交互元素，用于给动作准备 ref |
+| `--compact` | 压缩输出，用于省上下文 |
+| `--app <name>` | 选择目标应用 |
+| `--window-id <id>` | 应用有多个窗口时选定其中一个 |
+
+最常见的组合就是 `--skeleton -i --compact` 起手，`--root <ref> -i --compact` 跟进。
+
+## 读不全的时候
+
+快照里 `complete` 为 `false`，说明这棵树有分支没展开——通常因为内容还没渲染完，
+或者平台懒加载。此时先 `wait`，再重新快照，不要拿一份残缺的树去动作。
+
+- [快照与 ref](/concepts/snapshots-and-refs/)：ref 的生命周期。
+- [输出契约](/output/)：`complete` 与其他字段的定义。

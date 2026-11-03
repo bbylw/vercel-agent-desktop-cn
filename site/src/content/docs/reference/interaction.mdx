@@ -1,0 +1,74 @@
+---
+title: 对 ref 执行动作
+description: 点击、输入、选择、展开、滚动——全部走可访问性 API，默认不动指针也不抢焦点。
+---
+
+这一组命令的参数只有一个 ref，动作通过平台的可访问性 API 落下。默认无头：
+不移动指针，不夺取焦点，不激活前台窗口。
+
+<Aside type="note" title="先核对 available_actions">
+  快照里每个元素都带着 `available_actions`，它是这个元素此刻允许的动作白名单。
+  对不在列表里的动作发起请求，会被平台拒绝。
+</Aside>
+
+## 点击
+
+| 命令 | 作用 |
+|---|---|
+| `click` | 单击 |
+| `double-click` | 双击 |
+| `triple-click` | 三击，通常用于全选一段文本 |
+| `right-click` | 右键 |
+
+```bash
+agent-desktop click @s8f3k2p9:e8
+```
+
+PowerShell 里每个 ref 都要加引号：`agent-desktop click '@s8f3k2p9:e8'`，
+因为不加引号的 `@token` 是散裂（splatting）运算符。
+
+## 文本
+
+| 命令 | 作用 |
+|---|---|
+| `type` | 向元素输入文本 |
+| `set-value` | 直接把元素的值设为给定内容 |
+| `clear` | 清空元素 |
+
+`set-value` 比 `type` 快且确定，但它跳过了按键事件——依赖逐字输入触发逻辑的界面
+（自动补全、实时校验）可能不会响应。这类界面用 `type`。
+
+## 选择与状态
+
+| 命令 | 作用 |
+|---|---|
+| `focus` | 把焦点移到元素 |
+| `select` | 选中选项 |
+| `toggle` | 切换 |
+| `check` / `uncheck` | 勾选 / 取消勾选 |
+| `expand` / `collapse` | 展开 / 折叠 |
+
+## 滚动
+
+| 命令 | 作用 |
+|---|---|
+| `scroll` | 在元素或容器上滚动一段 |
+| `scroll-to` | 把元素滚动到可见位置 |
+
+滚动会改变界面，因此也可能让你手上的 ref 变陈旧。滚动之后重新快照，
+是比继续沿用旧 ref 更便宜的做法。
+
+## 动作之后必须读取
+
+一次调用返回 `ok: true` 只说明请求被接受了。界面按不按你的预期变化，要靠一次读取确认：
+
+```bash
+agent-desktop click @s8f3k2p9:e8
+agent-desktop wait --element @s8f3k2p9:e6 --predicate value --value 7   # 等一个值
+agent-desktop snapshot --app Finder -i                                  # 或者直接重读
+```
+
+## 下一步
+
+- [键盘、鼠标与物理输入](/reference/input/)：需要真实指针和按键时。
+- [应用、窗口与系统](/reference/app-system/)：启动应用、控制窗口、批量执行。

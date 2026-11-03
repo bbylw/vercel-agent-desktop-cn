@@ -1,0 +1,74 @@
+---
+title: 观察与查询
+description: snapshot、find、get、is、screenshot 与 list-surfaces——把界面变成可读的数据。
+---
+
+观察类命令是循环的起点和终点。它们不改变任何状态，所以可以放心反复调用。
+
+## snapshot
+
+读一棵可访问性树。
+
+```bash
+agent-desktop snapshot --app Finder -i
+agent-desktop snapshot --skeleton --app Slack -i --compact
+agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact
+agent-desktop snapshot --app Finder --window-id w-204749 -i
+```
+
+| flag | 作用 |
+|---|---|
+| `-i`、`--interactive` | 只保留可交互元素，每个都带 ref |
+| `--skeleton` | 只保留结构，用于摸清密集界面的整体 |
+| `--root <ref>` | 以某个 ref 为根重新快照，用于深入局部 |
+| `--compact` | 压缩输出，省上下文 |
+| `--app <name>` | 选定目标应用 |
+| `--window-id <id>` | 应用有多个窗口时选定其中一个 |
+
+返回的 `data` 里，`snapshot_id` 拼出所有 ref，`ref_count` 告诉你这次拿到了多少个可操作元素，
+`complete` 说明这棵树有没有读全。详见[快照与 ref](/concepts/snapshots-and-refs/)
+和[骨架与下钻](/concepts/skeleton-and-drilldown/)。
+
+## find
+
+在树里按条件筛元素，用来回答「那个东西在哪」，而不必先读完一整棵树。
+
+```bash
+agent-desktop find --help
+```
+
+## get 与 is
+
+`get` 读一个元素的一个属性，`is` 判断它是否处于某种状态。这两个命令是验证环节里比再快照
+一次更轻的选择：当你只需要确认一个值，就不要把整棵树搬进上下文。
+
+```bash
+agent-desktop get @s8f3k2p9:e6 --help
+agent-desktop is @s8f3k2p9:e6 --help
+```
+
+## screenshot
+
+```bash
+agent-desktop screenshot
+```
+
+截图是给人看的证据，不是给代理读的界面。agent-desktop 的判定路径不经过像素，
+所以不要用截图来决定下一个动作。
+
+<Aside type="caution" title="截图里含桌面内容">
+  截图可能拍到桌面上的私密内容。不要放进公开日志或上传，见[隐私与数据处理](/privacy/)。
+</Aside>
+
+## list-surfaces
+
+列出这个平台上当前可寻址的界面，包括外壳画的那些。见[界面](/concepts/surfaces/)。
+
+```bash
+agent-desktop list-surfaces
+```
+
+## 下一步
+
+- [对 ref 执行动作](/reference/interaction/)：拿到 ref 之后能做什么。
+- [JSON 输出契约](/output/)：这些命令返回的结构。

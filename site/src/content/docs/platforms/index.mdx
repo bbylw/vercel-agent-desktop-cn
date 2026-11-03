@@ -1,0 +1,59 @@
+---
+title: 平台支持
+description: macOS 的 AX API、Windows 的 UI Automation、Linux 的 AT-SPI，以及各自的前置条件。
+sidebar:
+  order: 0
+---
+
+CLI 在每个平台上都是同一套 60 个命令名，但底层走的是不同的可访问性 API，
+能力边界也因此不同。最准确的对照表来自你脚下这台机器：
+
+```bash
+agent-desktop skills get platform
+```
+
+## 可访问性 API
+
+| 平台 | API |
+|---|---|
+| macOS | AX API |
+| Windows | UI Automation |
+| Linux | AT-SPI |
+
+## 前置条件
+
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| 系统 | macOS 13 或更高 | Windows 10 1809 或更高，或 Windows Server 2019 或更高 | Ubuntu 24.04 或更高（glibc 2.35 起） |
+| 架构 | Intel 或 Apple Silicon | x64 或 ARM64 | x86_64 或 aarch64 |
+| 授权 | 运行 agent-desktop 的应用需要「辅助功能」权限 | 对终端同级完整性的应用无需额外授权 | 用户自己的图形会话，以及运行中的 AT-SPI 总线 |
+
+## 能力对照
+
+| | macOS | Windows | Linux |
+|---|:---:|:---:|:---:|
+| 可访问性树 | 支持 | 支持 | 支持（AT-SPI） |
+| 点击 / 输入 / 键盘 | 支持 | 支持 | AT-SPI；X11 / GNOME 按键 |
+| 鼠标输入 | 支持 | 支持 | X11，`--headed` |
+| 截图 | 支持 | 支持 | X11 窗口；Wayland 门户 |
+| 剪贴板 | 支持 | 支持 | 支持；Wayland 需要 `wl-clipboard` |
+| 应用与窗口管理 | 支持 | 支持 | 启动/列出；X11 窗口控制 |
+| 通知 | 支持 | 支持 | GNOME Shell |
+| 外壳界面（`open-system-surface`） | Dock、菜单栏附加项 | 支持 | GNOME 托盘、操作中心 |
+
+`key-down`、`key-up`、`mouse-down`、`mouse-up` 四个命令名在所有平台上都失败关闭，
+原因见[错误与恢复](/output/errors/)。
+
+## 分平台细读
+
+<CardGrid>
+  <Card title="macOS" icon="ph:apple-logo" href="/platforms/macos/">
+    辅助功能权限怎么给，没给的时候是什么表现。
+  </Card>
+  <Card title="Windows" icon="ph:windows-logo" href="/platforms/windows/">
+    完整性级别与 launch 的行为说明。
+  </Card>
+  <Card title="Linux" icon="ph:linux-logo" href="/platforms/linux/">
+    X11 与 Wayland 的差异，以及 AT-SPI 总线的前提。
+  </Card>
+</CardGrid>

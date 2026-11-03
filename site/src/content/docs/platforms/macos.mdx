@@ -1,0 +1,67 @@
+---
+title: macOS
+description: AX API、辅助功能权限，以及权限缺失时你会看到什么。
+---
+
+macOS 上 agent-desktop 走系统的 AX API。它只需要一个前提：运行 agent-desktop 的那个终端
+（或代理宿主进程）持有「辅助功能」权限。
+
+## 系统要求
+
+macOS 13 或更高，Intel 或 Apple Silicon 都可以。
+
+## 授予权限
+
+```bash
+agent-desktop permissions --guide
+```
+
+它会把你需要点开的地方指出来。路径是 *系统设置 → 隐私与安全性 → 辅助功能*，
+把运行 agent-desktop 的终端勾上。
+
+<Aside type="caution" title="授权对象是终端，不是二进制">
+  权限挂在发起调用的那个进程上。换一个终端、换一种启动方式（比如从代理宿主而不是 Terminal.app
+  里调用），就要重新授予一次。
+</Aside>
+
+## 没有权限时
+
+读不到界面通常表现为**空树**而不是报错。所以先跑一次：
+
+```bash
+agent-desktop status
+```
+
+`data` 里的权限状态不正常时，先解决权限，再怀疑命令写错了。
+
+## Dock 与菜单栏
+
+外壳界面这一层，macOS 上可以打开的是 Dock 和菜单栏附加项：
+
+```bash
+agent-desktop open-system-surface --help
+```
+
+`--help` 会列出当前支持的名字。
+
+## 能力表
+
+| 能力 | 状态 |
+|---|---|
+| 可访问性树 | 支持 |
+| 点击 / 输入 / 键盘 | 支持 |
+| 鼠标输入 | 支持 |
+| 截图 | 支持 |
+| 剪贴板 | 支持 |
+| 应用与窗口管理 | 支持 |
+| 通知 | 支持 |
+| 外壳界面 | Dock、菜单栏附加项 |
+
+这台机器上的完整能力表由二进制自己给出：
+
+```bash
+agent-desktop skills get platform
+```
+
+- [安装与权限](/start/install/)
+- [平台支持总览](/platforms/)

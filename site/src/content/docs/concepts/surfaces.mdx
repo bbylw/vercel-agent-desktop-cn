@@ -1,0 +1,48 @@
+---
+title: 界面
+description: 一次快照能瞄准的那块显示区域——窗口、对话框，以及外壳自己画的界面。
+---
+
+「界面（surface）」是 agent-desktop 里能被寻址、被快照、被操作的一块区域。
+`--app`、`--window-id`、`--root` 这些参数做的事情都只有一个：把目标收窄到一个界面。
+
+## 列出来
+
+```bash
+agent-desktop list-surfaces      # 这个平台上当前可寻址的界面
+agent-desktop list-apps          # 在运行的应用
+agent-desktop list-windows       # 某个应用的窗口
+agent-desktop list-displays      # 显示器
+```
+
+## 外壳界面
+
+除了应用窗口，桌面外壳自己画的那一层也是界面：macOS 的 Dock 和菜单栏附加项、
+Windows 的任务栏与通知区域、Linux 的 GNOME 托盘和操作中心。它们不属于任何应用窗口，
+所以单独用一条命令打开：
+
+```bash
+agent-desktop open-system-surface --help
+```
+
+`--help` 会列出你这个平台支持的界面名称。平台之间的差别见[平台支持](/platforms/)。
+
+## 通知
+
+通知是另一类独立界面：它由系统投递，读完之后要么关掉某一条，要么一次性清空。
+
+```bash
+agent-desktop list-notifications
+agent-desktop dismiss-notification          # 关掉一条
+agent-desktop dismiss-all-notifications     # 清空
+agent-desktop notification-action           # 触发通知上的动作
+```
+
+## 界面与 Chromium / Electron
+
+agent-desktop 只负责桌面应用这一层，网页自动化请用 agent-browser。两者可以接力：
+对于你自己启动的 Chromium 或 Electron 应用里的网页内容，agent-desktop 会开一个
+DevTools 端口，让 agent-browser 连上去。
+
+- [会话与追踪](/concepts/sessions/)：把跨界面的多步操作留在同一段记录里。
+- [平台支持](/platforms/)：每个平台支持的界面类型对照表。

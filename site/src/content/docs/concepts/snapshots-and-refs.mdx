@@ -1,0 +1,71 @@
+---
+title: 快照与 ref
+description: ref 属于产生它的那次快照。这一页讲它的构成、失效条件和正确用法。
+---
+
+`snapshot` 把一棵可访问性树读成 JSON，并给其中每个代理能操作的元素分配一个 ref。
+代理之后所有的动作都指向这个 ref。
+
+## ref 的构成
+
+```text
+@s8f3k2p9:e8
+└─┬─────┘ └┬─┘
+  │        └ 元素在这次快照里的序号
+  └ snapshot_id
+```
+
+id 两段缺一不可。只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`——脱离快照的序号没有含义，
+下一次快照里的 `e8` 很可能完全是另一个元素。
+
+## ref 指向什么
+
+一个 ref 背后是这次快照里那个节点的读数：角色、名字、可用动作，以及它是从哪棵子树里来的。
+
+```json
+{
+  "role": "treeitem",
+  "name": "Documents",
+  "ref_id": "@s8f3k2p9:e8",
+  "available_actions": ["Click"]
+}
+```
+
+`available_actions` 是选择动作的依据。对不在列表里的动作发起请求，会被平台拒绝。
+
+## 什么时候失效
+
+界面是活的。产生 ref 的那次快照对应的界面状态一旦被替换，ref 就不再安全。
+
+| 情形 | 结果 | 该怎么做 |
+|---|---|---|
+| 只写了序号，没带快照 id | `INVALID_ARGS` | 用完整的 `@snapshot:序号` |
+| 界面已经变了 | `STALE_REF` | 重新快照，改用新快照里的 ref |
+| 目标同时命中多个元素 | `AMBIGUOUS_TARGET` | 缩小范围：指定 `--window-id`，或换一次更聚焦的快照 |
+
+<Aside type="caution" title="不要缓存 ref">
+  把 ref 存进变量、写进文件、或者在两轮循环里复用它，都会在下一次界面变动时炸掉。
+  ref 是一次性的坐标，不是稳定的元素标识符。
+</Aside>
+
+## 正确的用法
+
+一次动作之后必然跟一次读取。这不是保守，是因为动作成功只说明请求被接受了，
+不说明界面按你的预期变了。
+
+```bash
+agent-desktop snapshot --app Finder -i              # 读，拿到 snapshot_id
+agent-desktop click @s8f3k2p9:e8                    # 用这次读到的 ref 动作
+agent-desktop snapshot --app Finder -i              # 再读，核对结果
+```
+
+需要「等到某个值变成什么」时，用 `wait` 而不是反复快照：
+
+```bash
+agent-desktop wait --element @s8f3k2p9:e6 --predicate value --value 7
+```
+
+## 下一步
+
+- [骨架与下钻](/concepts/skeleton-and-drilldown/)：怎么在密集界面里拿到合适的快照粒度。
+- [错误与恢复](/output/errors/)：每个错误码的处置方式。

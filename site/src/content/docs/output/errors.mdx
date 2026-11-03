@@ -1,0 +1,51 @@
+---
+title: 错误与恢复
+description: 每个错误码意味着什么，以及代理正确的下一步动作。
+---
+
+错误码是机器可读的，`message` 是给人看的。写恢复逻辑时只依赖前者。
+
+## 常见错误码
+
+| 码 | 含义 | 正确的下一步 |
+|---|---|---|
+| `INVALID_ARGS` | 参数不合法，比如 ref 只写了 `@e8` 没带快照 id | 修正参数再调用；这次调用没有产生任何副作用 |
+| `STALE_REF` | 界面已经变了，ref 属于的那次快照不再有效 | 重新 `snapshot`，使用新快照里的 ref |
+| `AMBIGUOUS_TARGET` | 目标同时命中多个对象，比如应用开了多个窗口 | 读 `error.details` 里的候选，用 `--window-id` 指定一个 |
+| `PERMISSION_DENIED` | 平台权限缺失，比如 macOS 未授予辅助功能 | 运行 `agent-desktop permissions --guide` |
+| `UNSUPPORTED` | 当前平台或当前界面不支持这个动作 | 查 `agent-desktop skills get platform` 的能力表，换一条路径 |
+
+<Aside type="caution" title="动作类错误不要盲目重试">
+  一次 `click` 报错不代表它没有生效。只有当 `error.disposition.retry` 为 `safe`
+  时才重试；否则先重新快照，看清界面现在的状态再决定。
+</Aside>
+
+## disposition 怎么读
+
+`disposition` 描述这次失败的性质，其中最关键的是 `retry`：
+
+- `safe` —— 这次调用确定没有生效，可以直接重试。
+- 其他取值 —— 重试可能把动作做两遍，或者根本不会改变结果。先重新观察。
+
+`suggestion` 通常存在，并且写成可以直接照做的形式。代理把它当作默认路径，
+只在它有明确理由时才偏离。
+
+## 失败关闭的命令
+
+`key-down`、`key-up`、`mouse-down`、`mouse-up` 这四个命令名被发布了，但在有守护进程
+能够可靠释放被按住的按键或鼠标键之前，它们会**拒绝运行**。这是设计上的失败关闭：
+一个没被释放的按键留在系统里，会污染之后所有的操作。
+
+`agent-desktop <command> --help` 会说明具体是哪一种拒绝。
+
+## 排查顺序
+
+<Render file="first-check" />
+
+再往下，`agent-desktop list-windows` 用来确认目标窗口是否真的在，
+`agent-desktop snapshot -i` 用来判断界面有没有发布可访问性树——读不到就是读不到。
+
+## 下一步
+
+- [JSON 输出契约](/output/)：信封结构与退出码。
+- [常见问题](/faq/)：现象到原因的对照。

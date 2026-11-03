@@ -1,0 +1,556 @@
+---
+import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
+import { Code } from "@/components/ui/code";
+import "./styles/home.css";
+
+const skillsCmd = `agent-desktop skills get desktop      # 循环、ref、验证与重试规则
+agent-desktop skills get platform     # 你这个平台上的能力边界
+agent-desktop <command> --help        # 单条命令的参数`;
+
+const agentsMd = `使用 \`agent-desktop\` 来查看并操作桌面应用。首次使用前先运行
+\`agent-desktop skills get desktop\` 和 \`agent-desktop skills get platform\`，
+并按其中的说明执行。`;
+
+const envelope = `{
+  "version": "2.6",
+  "ok": false,
+  "command": "click",
+  "error": {
+    "code": "STALE_REF",
+    "disposition": { "retry": "unsafe" },
+    "suggestion": "重新运行 snapshot，并使用新快照里的 ref"
+  }
+}`;
+
+const ffiPy = `import ctypes
+lib = ctypes.CDLL("./lib/libagent_desktop_ffi.dylib")
+lib.ad_adapter_create.restype = ctypes.c_void_p
+assert lib.ad_init(7) == 0          # ABI 主版本匹配才返回 AD_RESULT_OK
+adapter = lib.ad_adapter_create()
+lib.ad_adapter_destroy(adapter)`;
+
+// 循环探索器的四步：左侧选一步，右侧显示对应的命令与读数。
+const loop = [
+  {
+    n: "1",
+    t: "摸清整体",
+    d: "浅骨架，只保留结构，用来决定下一步往哪钻。",
+    cmd: "agent-desktop snapshot --app Finder --skeleton -i --compact",
+    out: `{ "role": "window", "name": "Downloads",
+  children: [
+    { "role": "outline",    "ref_id": "@s8f3k2p9:e1" },
+    { "role": "list",       "ref_id": "@s8f3k2p9:e3" },
+    { "role": "toolbar",    "ref_id": "@s8f3k2p9:e7" }
+  ] }`,
+    note: "一次全量快照在密集应用里能产出上千个节点，骨架只给你几十行。",
+  },
+  {
+    n: "2",
+    t: "钻进一块区域",
+    d: "把骨架里的一个 ref 当作新的根，再读一次。",
+    cmd: "agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact",
+    out: `{ "role": "list", "ref_id": "@s8f3k2p9:e3",
+  children: [
+    { "role": "treeitem", "name": "Documents",
+      "ref_id": "@s8f3k2p9:e8", "available_actions": ["Click"] },
+    { "role": "treeitem", "name": "Downloads",
+      "ref_id": "@s8f3k2p9:e9", "available_actions": ["Click"] }
+  ] }`,
+    note: "这一层才足够细，可以拿来动作。",
+  },
+  {
+    n: "3",
+    t: "对一个 ref 执行动作",
+    d: "走可访问性 API：不移动指针，也不夺取焦点。",
+    cmd: "agent-desktop click @s8f3k2p9:e8",
+    out: `{ "version": "2.6", "ok": true, "command": "click" }`,
+    note: "ok 只说明请求被接受，不说明界面按你的预期变了。",
+  },
+  {
+    n: "4",
+    t: "核对结果",
+    d: "等一个值成立，或者直接再读一次。循环以读取结束。",
+    cmd: "agent-desktop wait --element @s8f3k2p9:e9 --predicate value --value Downloads",
+    out: `{ "version": "2.6", "ok": true,
+  "command": "wait",
+  "data": { "matched": true, "elapsed_ms": 142 } }`,
+    note: "界面变了就用新快照里的 ref；旧 ref 会返回 STALE_REF。",
+  },
+];
+
+// 架构链：从调用方一路到应用。三个平台并列展开的那一层单独画成三张卡。
+const chain = [
+  { t: "调用方", d: "你的代码或 LLM 循环。运行一条命令，读它打印的 JSON 信封。" },
+  { t: "agent-desktop CLI / libagent_desktop_ffi", d: "CLI 每次调用起一个独立进程；C 库在进程内直接调用同一套工具。" },
+  { t: "agent-desktop-core", d: "命令、RefStore、快照构建。定义 PlatformAdapter trait 和所有共享类型。" },
+  { t: "PlatformAdapter", d: "core 触达操作系统的唯一途径。" },
+];
+
+const platformsFan = [
+  { t: "agent-desktop-macos", d: "AX API" },
+  { t: "agent-desktop-windows", d: "UI Automation" },
+  { t: "agent-desktop-linux", d: "AT-SPI" },
+];
+
+const cmdGroups = [
+  { label: "观察", items: ["snapshot", "find", "get", "is", "screenshot", "list-surfaces"] },
+  { label: "对 ref 执行操作", items: ["click", "double-click", "triple-click", "right-click", "type", "set-value", "clear", "focus", "select", "toggle", "check", "uncheck", "expand", "collapse", "scroll", "scroll-to"] },
+  { label: "键盘与鼠标", items: ["press", "hover", "drag", "mouse-move", "mouse-click", "mouse-wheel"], dead: ["key-down", "key-up", "mouse-down", "mouse-up"] },
+  {
+    label: "应用与窗口",
+    items: ["launch", "close-app", "list-apps", "list-windows", "list-displays", "focus-window", "resize-window", "move-window", "minimize", "maximize", "restore", "open-system-surface"],
+  },
+  { label: "通知", items: ["list-notifications", "dismiss-notification", "dismiss-all-notifications", "notification-action"] },
+  { label: "剪贴板", items: ["clipboard-get", "clipboard-set", "clipboard-clear"] },
+  { label: "等待", items: ["wait"] },
+  { label: "会话", items: ["session", "trace", "cursor-overlay"] },
+  { label: "系统", items: ["status", "permissions", "version", "batch", "skills"] },
+];
+
+// 能力对照。yes = 支持，part = 有条件，值和说明一起给。
+const rows: Array<{ name: string; mac: [string, string]; win: [string, string]; linux: [string, string] }> = [
+  { name: "可访问性树", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["支持（AT-SPI）", "yes"] },
+  { name: "点击 / 输入 / 键盘", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["AT-SPI；X11 / GNOME 按键", "part"] },
+  { name: "鼠标输入", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["X11，--headed", "part"] },
+  { name: "截图", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["X11 窗口；Wayland 门户", "part"] },
+  { name: "剪贴板", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["Wayland 需 wl-clipboard", "part"] },
+  { name: "应用与窗口管理", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["启动/列出；X11 窗口控制", "part"] },
+  { name: "通知", mac: ["支持", "yes"], win: ["支持", "yes"], linux: ["GNOME Shell", "part"] },
+  { name: "外壳界面", mac: ["Dock、菜单栏附加项", "part"], win: ["支持", "yes"], linux: ["GNOME 托盘、操作中心", "part"] },
+];
+
+// hero 右侧那个终端窗口。花括号在 Astro 模板里会被当成表达式，
+// 所以这段带标记的读数在 frontmatter 里拼成字符串，再用 set:html 输出。
+const termLines = [
+  '<span class="p">$</span> agent-desktop snapshot --app Finder -i',
+  '<span class="dim">{</span>',
+  '  <span class="k">"ok"</span><span class="dim">:</span> <span class="ok">true</span><span class="dim">,</span>',
+  '  <span class="k">"snapshot_id"</span><span class="dim">:</span> <span class="s">"s8f3k2p9"</span><span class="dim">,</span>',
+  '  <span class="k">"ref_count"</span><span class="dim">:</span> <span class="n">59</span><span class="dim">,</span>',
+  '  <span class="k">"tree"</span><span class="dim">: {</span>',
+  '    <span class="k">"role"</span><span class="dim">:</span> <span class="s">"window"</span><span class="dim">,</span> <span class="k">"name"</span><span class="dim">:</span> <span class="s">"Downloads"</span><span class="dim">,</span>',
+  '    <span class="k">"children"</span><span class="dim">: [{</span>',
+  '      <span class="k">"role"</span><span class="dim">:</span> <span class="s">"treeitem"</span><span class="dim">,</span>',
+  '      <span class="k">"name"</span><span class="dim">:</span> <span class="s">"Documents"</span><span class="dim">,</span>',
+  '      <span class="k">"ref_id"</span><span class="dim">:</span> <span class="r">"@s8f3k2p9:e8"</span><span class="dim">,</span>',
+  '      <span class="k">"available_actions"</span><span class="dim">: [</span><span class="s">"Click"</span><span class="dim">]</span>',
+  '    <span class="dim">}]</span>',
+  '  <span class="dim">}</span>',
+  '<span class="dim">}</span>',
+  '<span class="p">$</span> agent-desktop click <span class="r">@s8f3k2p9:e8</span>',
+  '<span class="dim">{</span> <span class="k">"ok"</span><span class="dim">:</span> <span class="ok">true</span><span class="dim">,</span> <span class="k">"command"</span><span class="dim">:</span> <span class="s">"click"</span> <span class="dim">}</span>',
+  '<span class="p">$</span> agent-desktop snapshot --app Finder -i   <span class="dim"># 再读一次核对</span>',
+];
+const termHtml = termLines.join("\n");
+
+const cellIcon = (kind: string) => (kind === "yes" ? "ph:check-circle" : "ph:circle-half");
+---
+
+<main id="main-content">
+  {/* ============ hero ============ */}
+  <section class="ad-hero" id="top">
+    <div class="ad-hero-inner">
+      <div class="ad-wrap">
+        <div class="ad-grid-2" style="padding: clamp(3rem,6vw,5.5rem) 0 clamp(2.5rem,4vw,3.5rem)">
+          <div>
+            <span class="ad-eyebrow">
+              <span class="inline-flex size-1.5 rounded-full bg-[var(--h-ok)]" aria-hidden="true"></span>
+              macOS · Windows · Linux &nbsp;/&nbsp; <b>CLI + C 库</b>
+            </span>
+            <h1 class="ad-h1">让 AI 代理<br /><em>读得懂</em>桌面应用</h1>
+            <p class="ad-lede">
+              agent-desktop 读取操作系统的可访问性树，把它变成带 ref 的 JSON。
+              代理对一个 ref 执行动作，再快照一次来核对——全程不做像素匹配，
+              控制循环始终留在你自己的代理里。
+            </p>
+
+            <div class="ad-install">
+              <span class="p">$</span>
+              <span class="c" data-ad-copy-src>npm install -g agent-desktop</span>
+              <button type="button" data-ad-copy aria-label="复制安装命令">
+                <Icon name="ph:copy" class="size-3.5" />复制
+              </button>
+            </div>
+
+            <div class="ad-cta">
+              <a class="ad-btn ad-btn-solid" href="/start/">
+                开始使用<Icon name="ph:arrow-right" class="size-4" />
+              </a>
+              <a class="ad-btn ad-btn-ghost" href="https://github.com/vercel-labs/agent-desktop" target="_blank" rel="noopener">
+                <Icon name="ph:github-logo" class="size-4" />GitHub
+              </a>
+              <a class="ad-btn ad-btn-ghost" href="/reference/">全部 60 个命令</a>
+            </div>
+          </div>
+
+          {/* 右侧：一轮真实的观察—操作—验证 */}
+          <div>
+            <div class="ad-term">
+              <div class="ad-term-bar">
+                <span class="ad-term-dot"></span><span class="ad-term-dot"></span><span class="ad-term-dot"></span>
+                <span class="ad-term-title">agent-desktop — Finder</span>
+              </div>
+              <pre class="ad-term-body"><code set:html={termHtml} /></pre>
+              <div class="ad-term-note">
+                <Icon name="ph:shield-check" class="size-3.5" />
+                无头执行：不移动指针，不夺取焦点
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ad-stats">
+        <div class="ad-stat"><b>60 / 56</b><span>命令名 / 实际可执行</span></div>
+        <div class="ad-stat"><b>3</b><span>个操作系统，同一套命令</span></div>
+        <div class="ad-stat"><b>0</b><span>内嵌模型，无图形界面</span></div>
+        <div class="ad-stat"><b>JSON</b><span>每条命令一个信封</span></div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 是 / 不是 ============ */}
+  <section class="ad-section">
+    <div class="ad-wrap">
+      <p class="ad-kicker">边界</p>
+      <h2 class="ad-h2">它是什么，不是什么</h2>
+      <p class="ad-sub">这四条决定了它适合放在系统的哪一层，也决定了它做不到什么。</p>
+
+      <div class="ad-isgrid">
+        <div class="ad-is">
+          <h3><Icon name="ph:wrench" class="size-4 text-brand" />代理调用的工具</h3>
+          <p>不是代理。观察—操作—验证的循环由调用方持有，它只把界面变成可寻址的数据，再把一次动作落下去。</p>
+        </div>
+        <div class="ad-is">
+          <h3><span class="ad-mark ad-mark-no" aria-hidden="true"><Icon name="ph:x" class="size-3" /></span>内部没有模型</h3>
+          <p>不内嵌 LLM，没有图形界面，也没有交互式提示。每条命令打印一个 JSON 信封然后退出。</p>
+        </div>
+        <div class="ad-is">
+          <h3><span class="ad-mark ad-mark-no" aria-hidden="true"><Icon name="ph:x" class="size-3" /></span>只管桌面应用</h3>
+          <p>网页自动化请用 agent-browser。自己启动的 Chromium / Electron 应用里的网页内容，它会开一个 DevTools 端口让 agent-browser 连上去。</p>
+        </div>
+        <div class="ad-is">
+          <h3><span class="ad-mark ad-mark-no" aria-hidden="true"><Icon name="ph:x" class="size-3" /></span>只读应用暴露的</h3>
+          <p>它读可访问性树，不做像素匹配，所以一个不发布可访问性树的界面，它同样读不到。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 四步循环 ============ */}
+  <section class="ad-section-tight" id="loop" style="border-top:1px solid var(--nb-border)">
+    <div class="ad-wrap">
+      <p class="ad-kicker">控制循环</p>
+      <h2 class="ad-h2">四步一轮：摸清、钻进、动作、核对</h2>
+      <p class="ad-sub">挑一步看它对应的命令和读数。一次成功的动作并不证明界面变了，所以每一轮都以一次读取结束。</p>
+
+      <div class="ad-loop" data-ad-loop>
+        <div class="ad-loop-list" role="tablist" aria-label="循环的四个步骤">
+          {loop.map((s, i) => (
+            <button
+              type="button"
+              role="tab"
+              class="ad-loop-btn"
+              id={`ad-loop-tab-${i}`}
+              aria-controls={`ad-loop-panel-${i}`}
+              aria-selected={i === 0}
+              data-ad-loop-tab={i}
+            >
+              <span class="ad-loop-i">{s.n}</span>
+              <span>
+                <span class="ad-loop-t">{s.t}</span>
+                <span class="ad-loop-d">{s.d}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div class="ad-loop-panels">
+          {loop.map((s, i) => (
+            <div
+              role="tabpanel"
+              id={`ad-loop-panel-${i}`}
+              aria-labelledby={`ad-loop-tab-${i}`}
+              class="ad-loop-panel"
+              hidden={i !== 0}
+            >
+              <Code code={s.cmd} lang="bash" />
+              <Code code={s.out} lang="json" />
+              <p class="ad-loop-d" style="margin-top:0.75rem">{s.note}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 架构 ============ */}
+  <section class="ad-section-tight" id="architecture" style="border-top:1px solid var(--nb-border)">
+    <div class="ad-wrap">
+      <p class="ad-kicker">实现</p>
+      <h2 class="ad-h2">从调用方到应用，只有这一条链</h2>
+      <p class="ad-sub">core 永远不 import 任何平台 crate，平台 crate 之间也互不 import。只有 CLI 和 C 库把一个平台 crate 接到 core 上，并且在编译期就选定。</p>
+
+      <div class="ad-stack">
+        <div>
+          <div class="ad-chain">
+            {chain.map((c) => (
+              <div class="ad-link-row">
+                <div class="ad-rail"><span class="ad-node"></span><span class="ad-rail-line"></span></div>
+                <div class="ad-card"><h3>{c.t}</h3><p>{c.d}</p></div>
+              </div>
+            ))}
+            <div class="ad-link-row">
+              <div class="ad-rail"><span class="ad-node"></span><span class="ad-rail-line"></span></div>
+              <div class="ad-fan">
+                {platformsFan.map((p) => (
+                  <div class="ad-card"><h3>{p.t}</h3><p>{p.d}</p></div>
+                ))}
+              </div>
+            </div>
+            <div class="ad-link-row">
+              <div class="ad-rail"><span class="ad-node"></span><span class="ad-rail-line"></span></div>
+              <div class="ad-card">
+                <h3>操作系统的可访问性 API</h3>
+                <p>macOS 的 AX API、Windows 的 UI Automation、Linux 的 AT-SPI。平台 crate 只通过它说话。</p>
+              </div>
+            </div>
+            <div class="ad-link-row">
+              <div class="ad-rail"><span class="ad-node"></span></div>
+              <div class="ad-card"><h3>应用</h3><p>通过上面那个 API 暴露它的界面。没暴露的，读不到。</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="ad-card" style="background:var(--nb-muted)">
+            <h3 style="font-family:var(--nb-font-sans);font-size:0.9375rem;font-weight:600">一个二进制只驱动一个操作系统</h3>
+            <p style="margin-top:0.5rem;font-size:0.875rem;line-height:1.7">
+              平台在编译期选定，所以不存在运行时的跨平台分派，也不存在「在 Linux 上驱动 Windows 应用」这种路径。
+              每个平台的适配器只能在它自己的操作系统上构建。
+            </p>
+            <p style="margin-top:0.875rem;font-size:0.875rem">
+              <a href="/c-library/build/" style="color:var(--nb-brand);text-decoration:none;font-weight:500">从源码构建 →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 平台 ============ */}
+  <section class="ad-section-tight" id="platforms" style="border-top:1px solid var(--nb-border)">
+    <div class="ad-wrap">
+      <p class="ad-kicker">平台</p>
+      <h2 class="ad-h2">同一套命令，三种底层</h2>
+      <p class="ad-sub">
+        命令名在三个平台完全一致，能力边界不同。最准确的对照表来自你脚下这台机器：
+        <code style="font-family:var(--nb-font-mono);font-size:0.875rem"> agent-desktop skills get platform</code>。
+      </p>
+
+      <div class="ad-tablewrap">
+        <table class="ad-table">
+          <thead>
+            <tr><th scope="col">能力</th><th scope="col">macOS</th><th scope="col">Windows</th><th scope="col">Linux</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr>
+                <th scope="row">{r.name}</th>
+                {[r.mac, r.win, r.linux].map(([text, kind]) => (
+                  <td>
+                    <span class:list={["ad-cell", kind === "yes" ? "ad-yes" : "ad-part"]}>
+                      <Icon name={cellIcon(kind)} class="size-3.5 shrink-0" />
+                      {text}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ad-tablewrap" style="margin-top:1rem">
+        <table class="ad-table">
+          <thead>
+            <tr><th scope="col">前置条件</th><th scope="col">系统</th><th scope="col">架构</th><th scope="col">授权</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">macOS</th>
+              <td style="text-align:start">13 或更高</td>
+              <td style="text-align:start">Intel / Apple Silicon</td>
+              <td style="text-align:start">辅助功能权限</td>
+            </tr>
+            <tr>
+              <th scope="row">Windows</th>
+              <td style="text-align:start">10 1809 / Server 2019 起</td>
+              <td style="text-align:start">x64 / ARM64</td>
+              <td style="text-align:start">终端同级完整性免授权</td>
+            </tr>
+            <tr>
+              <th scope="row">Linux</th>
+              <td style="text-align:start">Ubuntu 24.04（glibc 2.35+）</td>
+              <td style="text-align:start">x86_64 / aarch64</td>
+              <td style="text-align:start">图形会话 + AT-SPI 总线</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ad-cta" style="margin-top:1.5rem">
+        <a class="ad-btn ad-btn-out" href="/platforms/">三个平台的细节<Icon name="ph:arrow-right" class="size-4" /></a>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 命令 ============ */}
+  <section class="ad-section-tight" id="commands" style="border-top:1px solid var(--nb-border)">
+    <div class="ad-wrap">
+      <p class="ad-kicker">命令</p>
+      <h2 class="ad-h2">60 个命令名，56 个可执行</h2>
+      <p class="ad-sub">
+        虚线划掉的那四个——<code style="font-family:var(--nb-font-mono);font-size:0.875rem">key-down / key-up / mouse-down / mouse-up</code>——
+        已经发布，但在有守护进程能可靠释放被按住的按键或鼠标键之前会拒绝运行。这是设计上的失败关闭。
+      </p>
+
+      <div class="ad-cmdgroup">
+        {cmdGroups.map((g) => (
+          <div class="ad-cmdrow">
+            <div class="ad-cmdlabel">{g.label}</div>
+            <div class="ad-chips">
+              {g.items.map((c) => <code class="ad-chip">{c}</code>)}
+              {(g.dead ?? []).map((c) => <code class="ad-chip ad-chip-dead" title="已发布，但会拒绝运行">{c}</code>)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="ad-cta" style="margin-top:2rem">
+        <a class="ad-btn ad-btn-out" href="/reference/">命令参考<Icon name="ph:arrow-right" class="size-4" /></a>
+        <a class="ad-btn ad-btn-out" href="/reference/interaction/">动作类命令<Icon name="ph:arrow-right" class="size-4" /></a>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 面向代理 ============ */}
+  <section class="ad-section-tight" id="agents" style="border-top:1px solid var(--nb-border)">
+    <div class="ad-wrap">
+      <p class="ad-kicker">代理接入</p>
+      <h2 class="ad-h2">文档随二进制一起发布</h2>
+      <p class="ad-sub">代理在动手之前先读它自己那个版本的规则，这样依据永远和正在调用的二进制对齐，而不是和某份会过期的网页文档对齐。</p>
+
+      <div class="ad-agent">
+        <div>
+          <h3>让代理自己取规则</h3>
+          <p>两条命令，一条讲跨平台的循环规则，一条讲你脚下这个平台的能力边界。只读一条，代理会按另一个平台的假设行事。</p>
+          <Code code={skillsCmd} lang="bash" />
+        </div>
+        <div>
+          <h3>或者写进 AGENTS.md</h3>
+          <p>不想装技能，就把这段直接放进仓库的 <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">AGENTS.md</code>。</p>
+          <Code code={agentsMd} lang="markdown" />
+        </div>
+        <div>
+          <h3>契约只有一个信封</h3>
+          <p>
+            每条命令打印一个 JSON 信封，包含 <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">ok</code> 以及
+            <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">data</code> 或 <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">error</code>。
+            只有当 <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">error.disposition.retry</code> 为
+            <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">safe</code> 时才重试。
+          </p>
+          <Code code={envelope} lang="json" />
+        </div>
+        <div>
+          <h3>不想走 CLI，就在进程内调用</h3>
+          <p>每个版本同时发布三个平台的 <code style="font-family:var(--nb-font-mono);font-size:0.8125rem">libagent_desktop_ffi</code>，同一套 core、同一个适配器、同一份信封语义。</p>
+          <Code code={ffiPy} lang="python" />
+        </div>
+      </div>
+
+      <div class="ad-warn">
+        <Icon name="ph:lock-key" class="size-5" />
+        <div>
+          <h3>快照、剪贴板、截图和调试产物都可能含私密内容</h3>
+          <p>
+            不要把它们放进公开日志或上传。可选的 JEV 助手会把屏幕描述发送给你配置的模型服务商，
+            它与原生 CLI 彼此独立。
+            <a href="/privacy/"> 隐私与数据处理 →</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 结尾 CTA ============ */}
+  <section class="ad-final">
+    <div class="ad-wrap">
+      <div class="ad-final-inner">
+        <h2>先读一次界面，再动一次</h2>
+        <p>三分钟跑完一轮观察—操作—验证，用的就是你桌面上正在运行的应用。</p>
+        <div class="ad-final-btns">
+          <a class="ad-btn ad-btn-ink" href="/start/quickstart/">快速开始<Icon name="ph:arrow-right" class="size-4" /></a>
+          <a class="ad-btn ad-btn-out" href="/start/install/">安装与权限</a>
+          <a class="ad-btn ad-btn-out" href="https://github.com/vercel-labs/agent-desktop" target="_blank" rel="noopener">
+            <Icon name="ph:github-logo" class="size-4" />在 GitHub 上查看
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ============ 页脚 ============ */}
+  <footer class="ad-foot">
+    <div class="ad-wrap">
+      <div class="ad-foot-cols">
+        <div>
+          <h4>开始</h4>
+          <ul>
+            <li><a href="/start/">产品概览</a></li>
+            <li><a href="/start/install/">安装与权限</a></li>
+            <li><a href="/start/quickstart/">快速开始</a></li>
+            <li><a href="/start/skills/">面向 AI 代理</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>概念</h4>
+          <ul>
+            <li><a href="/concepts/snapshots-and-refs/">快照与 ref</a></li>
+            <li><a href="/concepts/skeleton-and-drilldown/">骨架与下钻</a></li>
+            <li><a href="/concepts/surfaces/">界面</a></li>
+            <li><a href="/concepts/sessions/">会话与追踪</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>参考</h4>
+          <ul>
+            <li><a href="/reference/">全部命令</a></li>
+            <li><a href="/output/">JSON 输出契约</a></li>
+            <li><a href="/output/errors/">错误与恢复</a></li>
+            <li><a href="/c-library/">C 库与语言绑定</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>项目</h4>
+          <ul>
+            <li><a href="https://github.com/vercel-labs/agent-desktop/releases" target="_blank" rel="noopener">发行版</a></li>
+            <li><a href="https://github.com/vercel-labs/agent-desktop/blob/main/LICENSE" target="_blank" rel="noopener">Apache-2.0 许可</a></li>
+            <li><a href="https://github.com/vercel-labs/agent-desktop/blob/main/SECURITY.md" target="_blank" rel="noopener">安全漏洞报告</a></li>
+            <li><a href="/faq/">常见问题</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="ad-foot-legal">
+        <span>agent-desktop · Apache-2.0</span>
+        <span aria-hidden="true">·</span>
+        <span>本站由 <a href="https://github.com/cloudflare/nimbus" target="_blank" rel="noopener">Nimbus</a> + <a href="https://bun.sh" target="_blank" rel="noopener">Bun</a> 构建</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script>
+  import initHome from "./home.client";
+  initHome();
+</script>

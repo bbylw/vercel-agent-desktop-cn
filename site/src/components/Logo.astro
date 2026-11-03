@@ -1,0 +1,9 @@
+---
+/* 站点标识内联渲染，这样浅色/深色模式都能跟随文字颜色。图形定义在 logo.ts，
+   分享卡片也读同一份。 */
+import { logo } from "./logo";
+
+interface Props { class?: string }
+const { class: cls = "h-5 w-5" } = Astro.props;
+---
+<svg xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${logo.width} ${logo.height}`} class={cls} aria-hidden="true">{logo.paths.map((d) => <path d={d} fill="currentColor" />)}</svg>

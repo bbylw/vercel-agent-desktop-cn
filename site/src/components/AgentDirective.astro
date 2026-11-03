@@ -1,0 +1,25 @@
+---
+interface Props {
+  /** Absolute or site-relative URL for this page's markdown version, or
+   *  `null` when the page has no per-page Markdown (a non-default
+   *  query-mode API version) — the directive then points at the index only. */
+  markdownUrl?: string | null;
+  /** Absolute or site-relative URL for the top-level llms.txt index. */
+  llmsUrl: string;
+}
+
+const { markdownUrl, llmsUrl } = Astro.props;
+---
+
+<aside class="sr-only" aria-label="给 AI 代理的说明" data-ai-agent-directive>
+  {markdownUrl ? (
+    <Fragment>
+      本页有 Markdown 版本，供 AI 读取时优先使用。本页见 <a href={markdownUrl}>{markdownUrl}</a>，
+      全文档索引见 <a href={llmsUrl}>{llmsUrl}</a>。
+    </Fragment>
+  ) : (
+    <Fragment>
+      全文档索引见 <a href={llmsUrl}>{llmsUrl}</a>。供 AI 读取时优先使用 Markdown。
+    </Fragment>
+  )}
+</aside>

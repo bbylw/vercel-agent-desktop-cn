@@ -1,0 +1,103 @@
+---
+title: 命令总览
+description: 共发布 60 个命令名，其中 56 个是实际可执行的命令，按分组列出。
+sidebar:
+  order: 0
+---
+
+CLI 一共发布 60 个命令名，其中 56 个是实际可执行的命令。其余 4 个——`key-down`、`key-up`、
+`mouse-down`、`mouse-up`——在有守护进程能够可靠释放被按住的按键或鼠标键之前会拒绝运行。
+每个平台上命令名都是同一套，能力边界则不同。
+
+```bash
+agent-desktop <command> --help     # 单条命令的参数
+agent-desktop skills get desktop   # 循环、ref、验证与重试规则
+agent-desktop skills get platform  # 你这个平台上的差异
+```
+
+## 观察
+
+读取界面，产出带 ref 的 JSON。
+
+| 命令 | 作用 |
+|---|---|
+| `snapshot` | 读一棵可访问性树，给每个可操作元素附一个 ref |
+| `find` | 按条件在树里找元素 |
+| `get` | 读一个元素的某个属性 |
+| `is` | 判断一个元素是否处于某种状态 |
+| `screenshot` | 截图 |
+| `list-surfaces` | 列出当前可寻址的界面 |
+
+常用 flag：`-i`（只要可交互元素）、`--skeleton`（只要结构）、`--root <ref>`（下钻）、
+`--compact`（压缩输出）、`--app <name>`、`--window-id <id>`。
+
+## 对 ref 执行操作
+
+这一组的对象永远是某个快照里的 ref，走可访问性 API，默认不移动指针也不夺取焦点。
+
+| 分类 | 命令 |
+|---|---|
+| 点击 | `click`、`double-click`、`triple-click`、`right-click` |
+| 文本 | `type`、`set-value`、`clear` |
+| 选择 | `focus`、`select`、`toggle`、`check`、`uncheck` |
+| 展开 | `expand`、`collapse` |
+| 滚动 | `scroll`、`scroll-to` |
+
+## 键盘与鼠标
+
+`press`、`hover`、`drag`、`mouse-move`、`mouse-click`、`mouse-wheel`。
+另有 `key-down`、`key-up`、`mouse-down`、`mouse-up` 四个命令名已发布但会拒绝运行，
+原因见[错误与恢复](/output/errors/)。
+
+物理输入需要全局 `--headed`；无头调用依然禁止激活前台窗口和合成输入。
+
+## 应用与窗口
+
+`launch`、`close-app`、`list-apps`、`list-windows`、`list-displays`、`focus-window`、
+`resize-window`、`move-window`、`minimize`、`maximize`、`restore`、`open-system-surface`。
+
+## 通知
+
+`list-notifications`、`dismiss-notification`、`dismiss-all-notifications`、`notification-action`。
+
+## 剪贴板
+
+`clipboard-get`、`clipboard-set`、`clipboard-clear`。
+
+<Aside type="caution" title="剪贴板内容可能私密">
+  剪贴板读取的结果可能包含密码、令牌或任何用户复制过的内容。不要把它写进公开日志或上传。
+  见[隐私与数据处理](/privacy/)。
+</Aside>
+
+## 等待
+
+`wait` —— 等到某个元素的某个值变成什么，比反复快照更省上下文。
+
+```bash
+agent-desktop wait --element @s8f3k2p9:e6 --predicate value --value 7
+```
+
+## 会话
+
+`session`、`trace`、`cursor-overlay`。见[会话与追踪](/concepts/sessions/)。
+
+## 系统
+
+`status`、`permissions`、`version`、`batch`、`skills`。
+
+## 分组明细
+
+<CardGrid>
+  <Card title="观察与查询" icon="ph:eye" href="/reference/observation/">
+    快照、查找、读取属性、截图。
+  </Card>
+  <Card title="对 ref 执行动作" icon="ph:cursor-click" href="/reference/interaction/">
+    点击、输入、选择、展开、滚动。
+  </Card>
+  <Card title="键盘、鼠标与物理输入" icon="ph:keyboard" href="/reference/input/">
+    press、drag、mouse-* 与 --headed 的边界。
+  </Card>
+  <Card title="应用、窗口与系统" icon="ph:windows-logo" href="/reference/app-system/">
+    启动、窗口控制、权限、批量执行。
+  </Card>
+</CardGrid>

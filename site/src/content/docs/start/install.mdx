@@ -1,0 +1,125 @@
+---
+title: 安装与权限
+description: 在 macOS、Windows 和 Linux 上安装 agent-desktop，校验下载，并授予它操作界面所需的权限。
+---
+
+每个发布版本里都同时打包了 x64 与 ARM64 的原生二进制和平台辅助程序。装好之后，
+`agent-desktop version` 是最快的确认方式。
+
+## 用包管理器安装
+
+在 macOS、Windows 或 Linux 上都可以：
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install -g agent-desktop
+    ```
+  </TabItem>
+  <TabItem label="Bun">
+    ```bash
+    bun add -g agent-desktop
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add -g agent-desktop
+    ```
+  </TabItem>
+  <TabItem label="Yarn">
+    ```bash
+    yarn global add agent-desktop
+    ```
+  </TabItem>
+</Tabs>
+
+```bash
+agent-desktop version
+```
+
+## 直接下载原生压缩包
+
+不想引入 JavaScript 启动器时，从 [GitHub Releases](https://github.com/vercel-labs/agent-desktop/releases)
+下载对应平台的原生压缩包，把它的辅助程序和可执行文件放在同一个目录里，
+然后确认这个目录在 `PATH` 上。
+
+<Aside type="caution" title="Homebrew 与 Scoop 还没就绪">
+  官方 Homebrew 与 Scoop 软件包正在提交审核，目前无法从默认目录安装。
+  仓库也不再维护自定义的 Homebrew tap 或 Scoop bucket。
+</Aside>
+
+## 授予权限
+
+三个平台的前置条件不一样，缺了会表现为读不到界面而不是报错，所以先跑一次权限检查。
+
+<Tabs>
+  <TabItem label="macOS">
+    需要「辅助功能」权限。让工具把路径指给你，然后到 *系统设置 → 隐私与安全性 → 辅助功能* 里勾选运行
+    agent-desktop 的那个终端。
+
+    ```bash
+    agent-desktop permissions --guide
+    ```
+
+    没有授权时快照会返回空树，而不是崩溃。
+  </TabItem>
+  <TabItem label="Windows">
+    对你终端同级完整性（integrity level）的应用无需额外授权。要操作以管理员身份运行的应用，
+    终端也必须以管理员身份运行，否则那棵可访问性树读不到。
+    ```bash
+    agent-desktop permissions
+    ```
+  </TabItem>
+  <TabItem label="Linux">
+    需要用户自己的图形会话，以及 `at-spi2-core`。会话总线不在时，AT-SPI 一棵树也读不出来。
+
+    ```bash
+    sudo apt install at-spi2-core
+    agent-desktop status
+    ```
+
+    X11 与 Wayland 的差别见 [Linux 平台说明](/platforms/linux/)。
+  </TabItem>
+</Tabs>
+
+## 确认装好了
+
+`status` 会把平台、权限状态和这个平台上支持的界面一次报给你。
+
+```bash
+agent-desktop status
+```
+
+```json
+{
+  "version": "2.6",
+  "ok": true,
+  "command": "status",
+  "data": {
+    "platform": "macos",
+    "accessibility": "granted",
+    "headed": false
+  }
+}
+```
+
+每条命令都打印这样一个信封，结构见 [JSON 输出契约](/output/)。
+
+## 从源码构建
+
+每个平台的适配器只能在它自己的操作系统上构建，所以把 cargo 的范围限制在宿主平台对应的包上。
+在 macOS 上：
+
+```bash
+HOST_PKGS=(-p agent-desktop-core -p agent-desktop-macos -p agent-desktop -p agent-desktop-ffi)
+cargo test "${HOST_PKGS[@]}"
+cargo clippy "${HOST_PKGS[@]}" --all-targets -- -D warnings
+```
+
+在 Windows 上，把列表里的 `agent-desktop-macos` 换成 `agent-desktop-windows`；在 Linux 上换成
+`agent-desktop-linux`。所有关卡列在仓库的 `CONTRIBUTING.md` 里。
+
+## 下一步
+
+- [快速开始](/start/quickstart/)：跑通第一轮观察—操作—验证。
+- [平台支持](/platforms/)：三个平台各自的能力边界。

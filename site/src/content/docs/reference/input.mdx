@@ -1,0 +1,63 @@
+---
+title: 键盘、鼠标与物理输入
+description: press、hover、drag、mouse-* 与 --headed 的边界，以及四个会拒绝运行的命令。
+---
+
+前面[对 ref 执行动作](/reference/interaction/)走的是可访问性 API。这一组命令处理的是
+键盘和鼠标本身：按下某个组合键、把指针移到某个位置、拖一段距离。它们更接近物理输入，
+因此对平台能力的依赖也更强。
+
+## 命令
+
+| 命令 | 作用 |
+|---|---|
+| `press` | 按下并释放一个键或组合键 |
+| `hover` | 悬停到一个元素上 |
+| `drag` | 拖拽 |
+| `mouse-move` | 移动指针 |
+| `mouse-click` | 在指针位置点击 |
+| `mouse-wheel` | 滚轮 |
+
+```bash
+agent-desktop press --help
+agent-desktop drag --help
+```
+
+具体参数以 `--help` 为准，不同平台支持的输入路径不同。
+
+## 无头与 --headed
+
+默认无头。无头调用依然禁止激活前台窗口和合成输入——这是设计上的边界，不是缺陷。
+
+需要真实指针和真实按键时，使用全局 `--headed` 标志：
+
+```bash
+agent-desktop --headed mouse-move --help
+```
+
+有头意味着界面会因为你的动作而改变前台状态，你随后读到的树也可能是另一个应用的。
+能在无头下完成的事情，就不要打开有头。
+
+## 会拒绝运行的四个命令
+
+`key-down`、`key-up`、`mouse-down`、`mouse-up` 这四个命令名已经发布，但会**拒绝运行**。
+
+<Aside type="caution" title="为什么是失败关闭">
+  按下不放而没能释放，会在系统里留下一个卡住的按键或鼠标键，之后所有操作都被污染。
+  在有守护进程能够可靠释放它们之前，这四个命令一律拒绝，比留下坏状态安全。
+</Aside>
+
+需要「按住再拖动」这类语义，用 `drag`；需要组合键，用 `press`。
+
+## 各平台的输入能力
+
+| 能力 | macOS | Windows | Linux |
+|---|:---:|:---:|:---:|
+| 点击 / 输入 / 键盘 | 支持 | 支持 | AT-SPI；X11 / GNOME 按键 |
+| 鼠标输入 | 支持 | 支持 | X11，`--headed` |
+
+完整对照表见[平台支持](/platforms/)，或者直接读本机的能力表：
+
+```bash
+agent-desktop skills get platform
+```

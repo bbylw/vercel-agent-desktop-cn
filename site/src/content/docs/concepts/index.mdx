@@ -1,0 +1,39 @@
+---
+title: 核心概念
+description: 快照、ref、骨架与下钻、界面、会话——agent-desktop 的全部词汇。
+sidebar:
+  order: 0
+---
+
+agent-desktop 的词汇表很短。把这几个词弄清楚，命令参考里的每个 flag 都会变得理所当然。
+
+<CardGrid>
+  <Card title="快照与 ref" icon="ph:hash" href="/concepts/snapshots-and-refs/">
+    一次快照是界面在某一时刻的读数；ref 是这次读数里某个元素的地址，带着快照的 id。
+  </Card>
+  <Card title="骨架与下钻" icon="ph:tree-structure" href="/concepts/skeleton-and-drilldown/">
+    密集界面先读结构再读局部，避免一次全量快照挤爆上下文。
+  </Card>
+  <Card title="界面" icon="ph:windows-logo" href="/concepts/surfaces/">
+    可以被快照和被操作的东西：窗口、对话框、菜单栏、桌面。
+  </Card>
+  <Card title="会话与追踪" icon="ph:film-strip" href="/concepts/sessions/">
+    把一串命令和它们各自的快照留在同一段历史里，供事后复盘。
+  </Card>
+</CardGrid>
+
+## 一句话版本
+
+- **快照（snapshot）** —— 一次界面对操作系统的读数，产出 JSON 树和一个 `snapshot_id`。
+- **ref** —— `@<snapshot_id>:<序号>`，指向产生它的那次快照里的一个元素。
+- **界面（surface）** —— 一块可寻址的显示区域；`--app`、`--window-id`、`--root` 都在选它。
+- **会话（session）** —— 一段时间内的命令与快照记录；`trace` 是它的产物。
+- **动作（action）** —— 对一个 ref 施加的一次操作，`available_actions` 是它的白名单。
+
+## 为什么不用像素匹配
+
+像素匹配把界面当成一张图，代理只能猜图里那块颜色是什么控件。可访问性树把界面当成一份有语义的
+声明：这个元素的角色是 `treeitem`，名字是 `Documents`，此刻能接受 `Click`。
+读到声明而不是猜图形，动作才有明确的对象，验证才有可比较的值。
+
+代价同样明确：一个不发布可访问性树的界面，agent-desktop 读不到。

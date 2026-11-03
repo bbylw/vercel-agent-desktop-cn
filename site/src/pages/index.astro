@@ -1,0 +1,22 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/components/Header.astro";
+import HomePage from "@/home/HomePage.astro";
+
+// 落地页是原生 Astro 路由：文档集合里没有一个映射到 `/` 的页面，所以这里
+// 可以直接占住首页，不需要注入钩子。
+const sections = [
+  { label: "文档", href: "/start/", isActive: false },
+  { label: "概念", href: "/concepts/", isActive: false },
+  { label: "命令", href: "/reference/", isActive: false },
+  { label: "平台", href: "/platforms/", isActive: false },
+];
+---
+
+<BaseLayout
+  title="面向 AI 代理的电脑操作"
+  description="agent-desktop 读取操作系统的可访问性树，把它变成带 ref 的 JSON。代理对一个 ref 执行动作，再快照一次核对，全程不做像素匹配。"
+>
+  <Header showSidebar={false} sections={sections} />
+  <HomePage />
+</BaseLayout>

@@ -1,0 +1,124 @@
+---
+title: 快速开始
+description: 先观察，对一个 ref 执行操作，再观察一次——对着真实应用跑完一整轮循环。
+---
+
+这一页把 `agent-desktop` 的一次完整往返走一遍：读界面、动一次、再读回来。
+示例用的是 macOS 的 Finder，`agent-desktop list-apps` 里的任意应用名都可以替换它。
+
+<Aside type="tip" title="先确认权限">
+  跑之前先确认环境。读不到界面最常见的原因不是命令写错，而是权限没给。
+</Aside>
+
+<Render file="first-check" />
+
+## 1. 观察
+
+`-i` 只保留可交互元素，每个都带一个 `ref`。每条命令打印一个 JSON 信封，下面的快照经过裁剪。
+
+```bash
+agent-desktop snapshot --app Finder -i
+```
+
+```json
+{
+  "version": "2.6",
+  "ok": true,
+  "command": "snapshot",
+  "data": {
+    "app": "Finder",
+    "window": { "id": "w-204749", "title": "Downloads" },
+    "snapshot_id": "s8f3k2p9",
+    "ref_count": 59,
+    "complete": true,
+    "tree": {
+      "role": "window",
+      "name": "Downloads",
+      "children": [
+        {
+          "role": "treeitem",
+          "name": "Documents",
+          "ref_id": "@s8f3k2p9:e8",
+          "available_actions": ["Click"]
+        }
+      ]
+    }
+  }
+}
+```
+
+值得注意的几个字段：
+
+| 字段 | 含义 |
+|---|---|
+| `snapshot_id` | 这次快照的 id。`ref` 由它和元素序号两段拼成。 |
+| `ref_count` | 这棵树里可操作元素的数量。 |
+| `complete` | 树是否读全了。为 `false` 时说明有分支没展开。 |
+| `available_actions` | 这个元素此刻允许的动作，是选命令的依据。 |
+
+## 2. 操作
+
+对上一步结果里的一个 `ref` 执行动作。默认无头：动作走可访问性 API，既不移动指针，也不夺取焦点。
+
+```bash
+agent-desktop click @s8f3k2p9:e8
+```
+
+## 3. 再观察
+
+一次成功的操作并不能证明界面变了，所以循环以一次读取结束。
+
+```bash
+agent-desktop snapshot --app Finder -i
+```
+
+<Aside type="note" title="ref 属于产生它的那次快照">
+  只写 `@e8` 会被拒绝并返回 `INVALID_ARGS`。界面发生变化时，操作会返回
+  `STALE_REF` 或 `AMBIGUOUS_TARGET`——重新快照，并使用新快照里的 ref。
+  规则见[快照与 ref](/concepts/snapshots-and-refs/)。
+</Aside>
+
+## 密集界面：先看骨架，再钻进去
+
+界面元素很多的应用，一次全量快照会淹没上下文。先摸清整体结构，再挑一块深入。
+
+```bash
+agent-desktop snapshot --skeleton --app Slack -i --compact   # 整体骨架
+agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact      # 深入其中一块区域
+```
+
+`--compact` 去掉空格与冗余字段，`--skeleton` 只保留结构。
+两种模式的区别见[骨架与下钻](/concepts/skeleton-and-drilldown/)。
+
+## 有多个窗口时
+
+同一应用开了多个窗口，操作会返回 `AMBIGUOUS_TARGET`，并把候选窗口 id 放在
+`error.details` 里。用 `--window-id` 指定其中一个：
+
+```bash
+agent-desktop snapshot --app Finder --window-id w-204749 -i
+```
+
+## 需要物理输入时
+
+全局 `--headed` 标志才允许物理输入——移动真实指针、按下真实按键。无头调用依然禁止激活前台窗口和合成输入。
+
+单条命令接受哪些参数由它自己的 `--help` 说明，不要凭记忆猜：
+
+```bash
+agent-desktop --headed mouse-click --help
+```
+
+## PowerShell 用户
+
+每个 ref 都要加引号。不加引号的 `@token` 在 PowerShell 里是散裂（splatting）运算符，命令会被静默改形。
+
+```powershell
+agent-desktop click '@s8f3k2p9:e8'
+```
+
+## 接下来
+
+- [面向 AI 代理](/start/skills/)：把这套规则交给代理自己读。
+- [核心概念](/concepts/)：快照、ref、界面、会话。
+- [命令参考](/reference/)：全部 60 个命令名。

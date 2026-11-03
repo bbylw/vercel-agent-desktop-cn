@@ -1,0 +1,66 @@
+---
+title: C 库与语言绑定
+description: 每个版本同时发布三个平台的 libagent_desktop_ffi，让程序在进程内直接调用工具。
+sidebar:
+  order: 0
+---
+
+CLI 为每条命令起一个独立进程。当你需要在自己的程序里高频调用、或者不想为每次读取付一次
+进程启动的成本时，每个版本同时发布的 `libagent_desktop_ffi` 可以让进程直接调用同一套工具。
+
+三个平台都有：macOS、Linux 和 Windows。
+
+## 最小示例
+
+用 Python 的 `ctypes` 把库加载进来，走一遍创建与销毁：
+
+```python
+import ctypes
+lib = ctypes.CDLL("./lib/libagent_desktop_ffi.dylib")
+lib.ad_adapter_create.restype = ctypes.c_void_p
+lib.ad_adapter_destroy.argtypes = [ctypes.c_void_p]
+assert lib.ad_init(7) == 0  # 头文件里的 AD_ABI_VERSION_MAJOR 与库匹配时返回 AD_RESULT_OK
+adapter = lib.ad_adapter_create()
+lib.ad_adapter_destroy(adapter)
+```
+
+`ad_init` 检查的是 ABI 主版本：传入的值与库匹配才返回 `AD_RESULT_OK`。
+这一步不是为了兼容，而是为了在版本错配时立刻失败，而不是在某个调用中途出现无法解释的行为。
+
+## 三件必须先弄清楚的事
+
+<Steps>
+  <Step title="入口点">
+    哪些函数可以调、参数和返回值的含义，由 `agent-desktop skills get ffi` 说明。
+    它随二进制一起发布，所以永远和你链接的那个库一致。
+  </Step>
+  <Step title="内存所有权">
+    谁分配、谁释放。跨 FFI 边界的缓冲区如果释放错了，表现为随机的崩溃而不是明确的报错，
+    是最难查的一类问题。规则同样写在 `skills get ffi` 里。
+  </Step>
+  <Step title="线程规则">
+    哪些调用可以在哪个线程上发生，能不能并发。平台可访问性 API 自身常有线程约束，
+    这一层会被透上来。
+  </Step>
+</Steps>
+
+```bash
+agent-desktop skills get ffi
+```
+
+## 平台库文件名
+
+| 平台 | 文件名 |
+|---|---|
+| macOS | `libagent_desktop_ffi.dylib` |
+| Linux | `libagent_desktop_ffi.so` |
+| Windows | `agent_desktop_ffi.dll` |
+
+## 与 CLI 的关系
+
+两者是同一套 core、同一个平台适配器、同一份信封语义。差别只在调用方式：
+CLI 每次起进程并打印 JSON，C 库在进程内返回。用 C 库不等于绕开 ref 规则——
+`ref` 仍然属于产生它的那次快照，见[快照与 ref](/concepts/snapshots-and-refs/)。
+
+- [构建与链接](/c-library/build/)：把头文件和库接到你自己的工程上。
+- [常见问题](/faq/)：构建与运行时的排查顺序。
